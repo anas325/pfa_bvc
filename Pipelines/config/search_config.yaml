@@ -1,0 +1,51 @@
+# Configuration for company research agent
+# Add, remove, or rename fields freely.
+# Use {company} as a placeholder in prompts.
+# Field types: string (default), integer, number
+
+fields:
+  - name: description
+    prompt: "Give a 2-sentence description of what {company} does and its main business activity."
+    type: string
+
+  - name: sector
+    prompt: "What industry or sector does {company} operate in?"
+    type: string
+
+  - name: ceo
+    prompt: "Who is the current CEO or Managing Director of {company}?"
+    type: string
+
+  - name: founded
+    prompt: "What year was {company} founded or established?"
+    type: integer
+
+  - name: headquarters
+    prompt: "Where is {company} headquartered?"
+    type: string
+
+  - name: revenue
+    prompt: "What is the most recent annual revenue or turnover of {company}? Include the currency and year."
+    type: string
+
+  - name: employees
+    prompt: "How many employees does {company} currently have?"
+    type: integer
+
+  - name: stock_exchange
+    prompt: "On which stock exchange is {company} listed and what is its ticker symbol?"
+    type: string
+
+# LLM settings
+llm:
+  base_url: https://openrouter.ai/api/v1
+  model: openrouter/auto   # swap to any model on OpenRouter
+
+# Search settings
+search:
+  max_results: 5          # Number of web results per query
+  search_depth: advanced  # basic or advanced
+
+# Output settings
+output:
+  file: data/companies_research.json

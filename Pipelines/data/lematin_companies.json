@@ -1,0 +1,634 @@
+[
+{
+  "libelle": "AFRIC INDUSTRIES SA",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "AFI",
+  "siege_social": "Zone Industrielle, Route de Tétouan, Lot 107, BP 368",
+  "cours": "336,00",
+  "variation": "0.82,00 %"
+},
+{
+  "libelle": "AFRIQUIA GAZ",
+  "secteur": "MASI Pétrole et Gaz",
+  "ticker": "GAZ",
+  "siege_social": "Rue Ibnou El Ouennane. Aîn Sebaâ - Casablanca",
+  "cours": "3 700,00",
+  "variation": "2.43,00 %"
+},
+{
+  "libelle": "AGMA",
+  "secteur": "MASI Assurances",
+  "ticker": "AGM",
+  "siege_social": "1. City Park Center. Rue Abderrahmane Sahraoui  . Casablanca",
+  "cours": "7 020,00",
+  "variation": "-0.3,00 %"
+},
+{
+  "libelle": "ALLIANCES DEVELOPPEMENT IMMOBILIER SA",
+  "secteur": "MASI Participation et promotion immobilières",
+  "ticker": "ADI",
+  "siege_social": "16. Rue Ali Abderrazak - Casablanca",
+  "cours": "425,00",
+  "variation": "-3.76,00 %"
+},
+{
+  "libelle": "ALUMINIUM DU  MAROC",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "ALM",
+  "siege_social": "Z.I de Moghogha. Route de Tétouan.  Tanger.",
+  "cours": "1 796,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "ATLANTASANAD",
+  "secteur": "MASI Assurances",
+  "ticker": "ATL",
+  "siege_social": "181. Boulevard d’Anfa - Casablanca",
+  "cours": "138,00",
+  "variation": "-2.17,00 %"
+},
+{
+  "libelle": "ATTIJARIWAFA BANK",
+  "secteur": "MASI Banques",
+  "ticker": "ATW",
+  "siege_social": "2. Bd Moulay Youssef BP: 11141 -  Casablanca  20 000.",
+  "cours": "408,00",
+  "variation": "3.92,00 %"
+},
+{
+  "libelle": "AUTO NEJMA",
+  "secteur": "MASI Distributeurs",
+  "ticker": "NEJ",
+  "siege_social": "Km 10. Route d'El Jadida - Casablanca  20 230.",
+  "cours": "4 585,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "BALIMA",
+  "secteur": "MASI Sociétés de placement immobilier",
+  "ticker": "BAL",
+  "siege_social": "2  Zankat Tihama - Rabat",
+  "cours": "216,55",
+  "variation": "-0.02,00 %"
+},
+{
+  "libelle": "BANQUE CENTRALE POPULAIRE",
+  "secteur": "MASI Banques",
+  "ticker": "BCP",
+  "siege_social": "101. BD Zerktouni - BP : 10 622 - 21 100. Casablanca",
+  "cours": "240,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "BANK OF AFRICA",
+  "secteur": "MASI Banques",
+  "ticker": "BCE",
+  "siege_social": "140. Avenue Hassan II . Casablanca",
+  "cours": "166,00",
+  "variation": "0.54,00 %"
+},
+{
+  "libelle": "BANQUE MAROCAINE POUR LE COMMERCE ET L'INDUSTRIE",
+  "secteur": "MASI Banques",
+  "ticker": "BCI",
+  "siege_social": "26. Place des Nations Unies. Casablanca",
+  "cours": "620,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SOCIETE DES BOISSONS DU MAROC",
+  "secteur": "MASI Boissons",
+  "ticker": "SBM",
+  "siege_social": "Boulevard Ain Ifrane, Sidi Moumen - Casablanca",
+  "cours": "2 250,00",
+  "variation": "-2.22,00 %"
+},
+{
+  "libelle": "CARTIER SAADA",
+  "secteur": "MASI Agroalimentaire / Production",
+  "ticker": "CRS",
+  "siege_social": "285-291 Nouvelle Zone Industrielle Sidi Ghanem - Marrakech",
+  "cours": "30,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "CREDIT DU MAROC",
+  "secteur": "MASI Banques",
+  "ticker": "CDM",
+  "siege_social": "48-58 Boulevard Mohamed V. Casablanca",
+  "cours": "1 025,00",
+  "variation": "-1.27,00 %"
+},
+{
+  "libelle": "CREDIT IMMOBILIER ET HOTELIER",
+  "secteur": "MASI Banques",
+  "ticker": "CIH",
+  "siege_social": "187, Avenue Hassan II, 20019 Casablanca Maroc",
+  "cours": "362,95",
+  "variation": "-1.64,00 %"
+},
+{
+  "libelle": "CIMENTS DU MAROC",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "CMA",
+  "siege_social": "621. Boulevard Panoramique. 20150 Casablanca",
+  "cours": "1 710,00",
+  "variation": "-0.58,00 %"
+},
+{
+  "libelle": "COLORADO",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "COL",
+  "siege_social": "Route My Thami Km 15 Commune Rurale Oulad Azouz Dar Bouâzza. Casablanca",
+  "cours": "81,76",
+  "variation": "-0.37,00 %"
+},
+{
+  "libelle": "COSUMAR",
+  "secteur": "MASI Agroalimentaire / Production",
+  "ticker": "CSR",
+  "siege_social": "8. Rue El Mouatamid Ibnou Abbad. BP: 3098. Casablanca",
+  "cours": "193,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "COMPAGNIE DE TRANSPORT AU MAROC",
+  "secteur": "MASI Transport",
+  "ticker": "CTM",
+  "siege_social": "Km 13.5 Autoroute de Casa-Rabat. Sidi Bernoussi. Casablanca",
+  "cours": "839,00",
+  "variation": "-0.12,00 %"
+},
+{
+  "libelle": "DARI COUSPATE",
+  "secteur": "MASI Agroalimentaire / Production",
+  "ticker": "DRI",
+  "siege_social": "234 Parc Industriel Aviation - Salé 11000",
+  "cours": "3 504,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "DELATTRE LEVIVIER MAROC",
+  "secteur": "MASI Ingénieries et Biens d'Equipement Industriels",
+  "ticker": "DLM",
+  "siege_social": "Km 9 Route de Rabat 20 250 Aïn Sebaa Casablanca",
+  "cours": "40,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "DELTA HOLDING",
+  "secteur": "MASI Sociétés de Portefeuilles - Holdings",
+  "ticker": "DHO",
+  "siege_social": "Complexe de Skhirat - Angle Avenue Hassan II et Route de la plage - Skhirat",
+  "cours": "53,50",
+  "variation": "4.65,00 %"
+},
+{
+  "libelle": "DISWAY",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "DWY",
+  "siege_social": "8. Lotissement La Colline II - Sidi Maarouf - Casablanca",
+  "cours": "719,00",
+  "variation": "-2.64,00 %"
+},
+{
+  "libelle": "DOUJA PROMOTION GROUPE ADDOHA SA",
+  "secteur": "MASI Participation et promotion immobilières",
+  "ticker": "ADH",
+  "siege_social": "Km 7. Route de Rabat . Ain Sebâa. Casablanca",
+  "cours": "31,50",
+  "variation": "-0.03,00 %"
+},
+{
+  "libelle": "ENNAKL AUTOMOBILES",
+  "secteur": "MASI Distributeurs",
+  "ticker": "NKL",
+  "siege_social": "Z.I Chaguia II BP 129-1080 -Tunis- Tunisie",
+  "cours": "35,40",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "FENIE BROSSETTE",
+  "secteur": "MASI Distributeurs",
+  "ticker": "FBR",
+  "siege_social": "284. Boulevard Zerktouni - Casablanca",
+  "cours": "290,00",
+  "variation": "-1.03,00 %"
+},
+{
+  "libelle": "HIGHTECH PAYMENT SYSTEMS",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "HPS",
+  "siege_social": "Casablanca Nearshore Park - Shore 1, Secteur A - 1100 boulevard Al Qods - Sidi Maârouf, Casablanca 20270",
+  "cours": "525,00",
+  "variation": "-2.86,00 %"
+},
+{
+  "libelle": "IB MAROC.COM SA",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "IBC",
+  "siege_social": "N°42, Boulevard Abdelmoumen Immeuble Walili Street - 7ème étage Plateau 49 Casablanca - Maroc",
+  "cours": "20,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "INVOLYS",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "INV",
+  "siege_social": "88/90 rue Larbi Doghmi, 2ème étage, Casablanca",
+  "cours": "134,00",
+  "variation": "0.75,00 %"
+},
+{
+  "libelle": "ITISSALAT AL-MAGHRIB",
+  "secteur": "MASI Télécommunications",
+  "ticker": "IAM",
+  "siege_social": "Avenue Annakhil. Hay Riad. Rabat",
+  "cours": "93,00",
+  "variation": "-0.54,00 %"
+},
+{
+  "libelle": "JET CONTRACTORS",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "JET",
+  "siege_social": "78, quartier industriel de Takaddoum",
+  "cours": "197,90",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "LABEL VIE",
+  "secteur": "MASI Distributeurs",
+  "ticker": "LBV",
+  "siege_social": "Km 3.5 Route des Zaërs Souissi - Rabat",
+  "cours": "3 949,00",
+  "variation": "-0.03,00 %"
+},
+{
+  "libelle": "LAFARGEHOLCIM MAROC",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "LHM",
+  "siege_social": "6. Route de Mekka. Quartier Les Crêtes. BP: 7234 - Casablanca",
+  "cours": "1 540,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "LESIEUR CRISTAL",
+  "secteur": "MASI Agroalimentaire / Production",
+  "ticker": "LES",
+  "siege_social": "Casa Business Towers, Tour Mainstreet, étages 20-21 & 22, boulevard Main Street, Casa Anfa, Casablanca, Maroc",
+  "cours": "415,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "M2M GROUP",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "M2M",
+  "siege_social": "16, Rue Abdellah Ben Mehyou, Palmiers -20340 - Casablanca",
+  "cours": "421,00",
+  "variation": "-0.24,00 %"
+},
+{
+  "libelle": "MAGHREB OXYGENE",
+  "secteur": "MASI Chimie",
+  "ticker": "MOX",
+  "siege_social": "Immeuble Tafraouti Km 7.5 Route de Rabat Aïn Sebaâ - Casablanca",
+  "cours": "386,00",
+  "variation": "0.03,00 %"
+},
+{
+  "libelle": "MANAGEM",
+  "secteur": "MASI Mines",
+  "ticker": "MNG",
+  "siege_social": "Twin Center, Tour A, angle Bd Zerktouni et Al Massira Al Khadra - BP: 5199 - Casablanca",
+  "cours": "10 745,00",
+  "variation": "-5.26,00 %"
+},
+{
+  "libelle": "MED PAPER",
+  "secteur": "MASI Sylviculture et Papier",
+  "ticker": "MDP",
+  "siege_social": "Zone Industrielle Mghogha. Route de Tetuan - Allée n°1. Lot 19  -  (BP: n°400)  -  TANGER",
+  "cours": "23,61",
+  "variation": "1.65,00 %"
+},
+{
+  "libelle": "MICRODATA",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "MIC",
+  "siege_social": "30, Bd Ibnou Sina, Hay Hassani, Casablanca.",
+  "cours": "790,00",
+  "variation": "-4.56,00 %"
+},
+{
+  "libelle": "SOCIETE LES EAUX MINERALES D'OULMES",
+  "secteur": "MASI Boissons",
+  "ticker": "OUL",
+  "siege_social": "Z.I Bouskoura 20 180. Casablanca",
+  "cours": "1 257,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SOCIETE DE PROMOTION PHARMACEUTIQUE DU MAGHREB S.A",
+  "secteur": "MASI Industrie Pharmaceutique",
+  "ticker": "PRO",
+  "siege_social": "Rue 7. zone industrielle du Sahel. BP 96/97. 26 400. Had Soualem.- Berrechid - Maroc",
+  "cours": "1 410,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SOCIETE DE REALISATIONS MECANIQUES",
+  "secteur": "MASI Distributeurs",
+  "ticker": "SRM",
+  "siege_social": "Route d'El Jadida Km 14 RP 8 Province de Nouaceur- Commune Rurale de Bouskoura - Casablanca",
+  "cours": "510,00",
+  "variation": "-0.78,00 %"
+},
+{
+  "libelle": "REBAB COMPANY",
+  "secteur": "MASI Mines",
+  "ticker": "REB",
+  "siege_social": "Boulevard Sidi Mohamed Ben Abdellah, Tour Marina 2, 6ème étage, Marina Shopping Center",
+  "cours": "104,00",
+  "variation": "0.96,00 %"
+},
+{
+  "libelle": "RESIDENCES DAR SAADA",
+  "secteur": "MASI Participation et promotion immobilières",
+  "ticker": "RDS",
+  "siege_social": "277-279 Bd Zerktouni",
+  "cours": "140,20",
+  "variation": "-3.28,00 %"
+},
+{
+  "libelle": "RISMA",
+  "secteur": "MASI Loisirs et Hôtels",
+  "ticker": "RIS",
+  "siege_social": "97, Boulevard Massira El Khadra, 5ème Etage, Casablanca",
+  "cours": "150,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SOCIETE MAGHREBINE DE MONETIQUE",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "S2M",
+  "siege_social": "Casa Nearshore Park – 2C-306-1100, Bd El Qods, Sidi Maârouf, 20270",
+  "cours": "549,00",
+  "variation": "-4.19,00 %"
+},
+{
+  "libelle": "SAMIR",
+  "secteur": "MASI Pétrole et Gaz",
+  "ticker": "SAM",
+  "siege_social": "Route côtière de Mohammedia BP: 89 & 101 - Mohammedia",
+  "cours": "127,80",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SOCIETE METALLURGIQUE D'IMITER",
+  "secteur": "MASI Mines",
+  "ticker": "SMI",
+  "siege_social": "Twin Center, Tour A, angle Bd Zerktouni et Al Massira Al Khadra - BP: 5199 - Casablanca",
+  "cours": "7 700,00",
+  "variation": "-8.69,00 %"
+},
+{
+  "libelle": "SOCIETE NATIONALE D'ELECTROLYSE ET DE PETROCHIMIE",
+  "secteur": "MASI Chimie",
+  "ticker": "SNP",
+  "siege_social": "233. boulevard Mohammed V. Casablanca",
+  "cours": "383,10",
+  "variation": "0.5,00 %"
+},
+{
+  "libelle": "SOCIETE D'EXPLOITATION DES PORTS - MARSA MAROC",
+  "secteur": "MASI Services de transport",
+  "ticker": "MSA",
+  "siege_social": "175, BD Zerktouni",
+  "cours": "770,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SOCIETE NATIONALE DE SIDERURGIE SA",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "SID",
+  "siege_social": "Siège Social: N°2. El Aaroui- BP 551 à NADOR &  Direction générale:  Twin Center -Tour A - 18e Et. Bd Zerktouni à Casablanca",
+  "cours": "1 860,00",
+  "variation": "-1.61,00 %"
+},
+{
+  "libelle": "SOCIETE DE THERAPEUTIQUE MAROCAINE",
+  "secteur": "MASI Industrie Pharmaceutique",
+  "ticker": "SOT",
+  "siege_social": "Centre de Bouskoura. BP n° 1 -- Casablanca.",
+  "cours": "1 611,00",
+  "variation": "-0.37,00 %"
+},
+{
+  "libelle": "STOKVIS NORD AFRIQUE",
+  "secteur": "MASI Distributeurs",
+  "ticker": "SNA",
+  "siege_social": "Lot 17 11. Zone Industrielle Ouled Salah – Bouskoura",
+  "cours": "69,00",
+  "variation": "-1.88,00 %"
+},
+{
+  "libelle": "STROC INDUSTRIE",
+  "secteur": "MASI Ingénieries et Biens d'Equipement Industriels",
+  "ticker": "STR",
+  "siege_social": "4, Rue des Tabors, Oasis, Casablanca",
+  "cours": "158,00",
+  "variation": "0.6,00 %"
+},
+{
+  "libelle": "TAQA MOROCCO",
+  "secteur": "MASI Electricité",
+  "ticker": "TQM",
+  "siege_social": "Centrale thermique de Jorf Lasfar – Km 23 Route Régionale 301, Commune de Moulay Abdellah,",
+  "cours": "970,00",
+  "variation": "-1.03,00 %"
+},
+{
+  "libelle": "TOTALENERGIES MARKETING MAROC",
+  "secteur": "MASI Pétrole et Gaz",
+  "ticker": "TMA",
+  "siege_social": "146, boulevard Zerktouni, 20000",
+  "cours": "1 496,00",
+  "variation": "0.27,00 %"
+},
+{
+  "libelle": "UNIMER",
+  "secteur": "MASI Agroalimentaire / Production",
+  "ticker": "UMR",
+  "siege_social": "Km 11. Rue L. Route des Zanatas Aïn Sebaâ Sidi Bernoussi Q.I - Casablanca 20 252",
+  "cours": "160,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "WAFA ASSURANCE",
+  "secteur": "MASI Assurances",
+  "ticker": "WAA",
+  "siege_social": "1. Boulevard Abdelmoumen - Casablanca",
+  "cours": "4 900,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "ZELLIDJA S.A",
+  "secteur": "MASI Sociétés de Portefeuilles - Holdings",
+  "ticker": "ZDJ",
+  "siege_social": "Boulevard Sidi Mohamed Ben Abdellah, Tour Marina 2, 6ème étage, Marina Shopping Center",
+  "cours": "226,40",
+  "variation": "-0.62,00 %"
+},
+{
+  "libelle": "DIAC SALAF",
+  "secteur": "MASI Sociétés de financement et Autres Activités Financières",
+  "ticker": "DIS",
+  "siege_social": "32. Boulevard de la Résistance. Casablanca",
+  "cours": "26,25",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "EQDOM",
+  "secteur": "MASI Sociétés de financement et Autres Activités Financières",
+  "ticker": "EQD",
+  "siege_social": "127. Boulevard Zerktouni - 20 100 - Casablanca",
+  "cours": "1 396,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "MAGHREBAIL",
+  "secteur": "MASI Sociétés de financement et Autres Activités Financières",
+  "ticker": "MAB",
+  "siege_social": "45. Boulevard My Youssef. Casablanca - 20 000",
+  "cours": "890,00",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "MAROC LEASING",
+  "secteur": "MASI Sociétés de financement et Autres Activités Financières",
+  "ticker": "MLE",
+  "siege_social": "57. Angle Bd Abdelmoumen  et Rue Pinel - Casablanca",
+  "cours": "348,10",
+  "variation": "0,00 %"
+},
+{
+  "libelle": "SALAFIN",
+  "secteur": "MASI Sociétés de financement et Autres Activités Financières",
+  "ticker": "SLF",
+  "siege_social": "Zenith Millenium. immeuble 8. Sidi Maarouf – Casablanca – Maroc",
+  "cours": "501,20",
+  "variation": "0.76,00 %"
+},
+{
+  "libelle": "IMMORENTE INVEST",
+  "secteur": "MASI Sociétés de placement immobilier",
+  "ticker": "IMO",
+  "siege_social": "5-7, rue Ibnou Toufail, Casablanca, Maroc",
+  "cours": "91,30",
+  "variation": "0.21,00 %"
+},
+{
+  "libelle": "MUTANDIS SCA",
+  "secteur": "MASI Agroalimentaire / Production",
+  "ticker": "MUT",
+  "siege_social": "22, boulevard Abdelkrim Al Khattabi – Casablanca",
+  "cours": "229,60",
+  "variation": "-0.5,00 %"
+},
+{
+  "libelle": "ARADEI CAPITAL",
+  "secteur": "MASI Sociétés de placement immobilier",
+  "ticker": "ARD",
+  "siege_social": "Route secondaire 1029, Municipalité de Sidi Maârouf – 20180 - Casablanca",
+  "cours": "418,00",
+  "variation": "-0.72,00 %"
+},
+{
+  "libelle": "AKDITAL",
+  "secteur": "MASI Santé",
+  "ticker": "AKT",
+  "siege_social": "246 route de l’Oasis, Casablanca",
+  "cours": "1 118,00",
+  "variation": "-0.27,00 %"
+},
+{
+  "libelle": "AUTO HALL",
+  "secteur": "MASI Distributeurs",
+  "ticker": "ATH",
+  "siege_social": "64. Avenue Lalla Yacout Casablanca",
+  "cours": "79,50",
+  "variation": "-0.63,00 %"
+},
+{
+  "libelle": "AFMA SA",
+  "secteur": "MASI Assurances",
+  "ticker": "AFM",
+  "siege_social": "22 Boulevard Moulay Youssef",
+  "cours": "1 246,00",
+  "variation": "-0.08,00 %"
+},
+{
+  "libelle": "DISTY TECHNOLOGIES",
+  "secteur": "MASI Matériels, Logiciels et Services Informatiques",
+  "ticker": "DYT",
+  "siege_social": "12, rue Mohamed Abdou, Casablanca",
+  "cours": "338,00",
+  "variation": "-3.11,00 %"
+},
+{
+  "libelle": "COMPAGNIE MINIERE DE TOUISSIT",
+  "secteur": "MASI Mines",
+  "ticker": "",
+  "siege_social": "88-90 Rue Larbi DOGHMI, 3ème étage - Casablanca",
+  "cours": "0,00",
+  "variation": ",00 %"
+},
+{
+  "libelle": "SANLAM MAROC",
+  "secteur": "MASI Assurances",
+  "ticker": "",
+  "siege_social": "216. Boulevard Zerktouni -20 000- Casablanca",
+  "cours": "0,00",
+  "variation": ",00 %"
+},
+{
+  "libelle": "TRAVAUX GENERAUX DE CONSTRUCTION DE CASABLANCA",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "TGC",
+  "siege_social": "4 Rue Imam Mouslim Casablanca Oasis",
+  "cours": "744,00",
+  "variation": "-1.88,00 %"
+},
+{
+  "libelle": "CFG BANK",
+  "secteur": "MASI Banques",
+  "ticker": "CFG",
+  "siege_social": "5-7, rue Ibnou Toufail – Palmier – 20100 Casablanca Maroc",
+  "cours": "205,50",
+  "variation": "-2.19,00 %"
+},
+{
+  "libelle": "VICENNE",
+  "secteur": "MASI Santé",
+  "ticker": "VCN",
+  "siege_social": "Angle Rif, Route des Zaërs Km 3,5  Souissi –Rabat",
+  "cours": "399,00",
+  "variation": "-2.51,00 %"
+},
+{
+  "libelle": "CASH PLUS S.A",
+  "secteur": "MASI Sociétés de financement et Autres Activités Financières",
+  "ticker": "CAP",
+  "siege_social": "1 Rue des Pléiades, 3ème étage, Q. des Hôpitaux – Casablanca",
+  "cours": "279,85",
+  "variation": "-4.16,00 %"
+},
+{
+  "libelle": "SOCIETE GENERALE DES TRAVAUX DU MAROC",
+  "secteur": "MASI Bâtiment et Matériaux de Construction",
+  "ticker": "GTM",
+  "siege_social": "2, Boulevard Zerktouni – Casablanca",
+  "cours": "717,00",
+  "variation": "-2.23,00 %"
+}
+]

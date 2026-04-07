@@ -1,0 +1,46 @@
+company,sector,parent
+Attijariwafa Bank,Banking,Al Mada
+Banque Centrale Populaire,Banking,State / Cooperative Group
+Bank of Africa,Banking,BMCE Group
+BMCI,Banking,BNP Paribas
+CIH Bank,Banking,CDG
+Credit du Maroc,Banking,Holding (Saham / Holmarcom partial)
+CFG Bank,Banking,Independent
+Maroc Telecom,Telecom,e& (Etisalat) + State
+HPS,Technology,Independent
+Managem,Mining,Al Mada
+SMI (Societe Metallurgique d'Imiter),Mining,Managem
+CMT (Compagnie Miniere de Touissit),Mining,Independent
+TAQA Morocco,Energy,TAQA (UAE)
+Afriquia Gaz,Oil & Gas,Akwa Group
+TotalEnergies Marketing Maroc,Oil & Gas,TotalEnergies
+LafargeHolcim Maroc,Construction Materials,Holcim Group
+Ciments du Maroc,Construction Materials,Heidelberg Materials
+Sonasid,Steel,ArcelorMittal (partial)
+Aluminium du Maroc,Construction Materials,Independent
+TGCC (Travaux Generaux),Construction,Independent
+Addoha (Douja Promotion Groupe),Real Estate,Independent
+Alliances Developpement Immobilier,Real Estate,Independent
+Residences Dar Saada,Real Estate,Palmeraie Group
+Aradei Capital,Real Estate,CFG Group
+Marsa Maroc,Port Operations,State
+Auto Hall,Distribution,Auto Hall Group
+Auto Nejma,Distribution,Mercedes-Benz Group (distribution rights)
+Label Vie,Retail,Best Financiere Group
+Cosumar,Agro-industry,Wilmar + Cosumar Group
+Lesieur Cristal,Agro-industry,Avril Group
+Cartier Saada,Agro-industry,Independent
+Akdital,Healthcare,Akdital Group
+AtlantaSanad,Insurance,Holmarcom Group
+Wafa Assurance,Insurance,Attijariwafa Bank
+Sanlam Maroc,Insurance,Sanlam Group
+AGMA,Insurance,Independent
+AFMA,Insurance,Independent
+Sothema,Pharmaceuticals,Independent
+Delta Holding,Industrial,Delta Holding Group
+Jet Contractors,Construction,Independent
+Risma,Tourism,Accor (partial)
+Cash Plus,Financial Services,Independent
+EQDOM,Consumer Finance,Societe Generale
+Oulmès (Eaux Minerales),Beverage,Holmarcom Group
+SBM (Brasseries du Maroc),Beverage,Castel Group

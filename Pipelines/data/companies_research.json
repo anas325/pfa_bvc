@@ -1,0 +1,175 @@
+[
+  {
+    "ticker": "ATW",
+    "company_name": "Attijariwafa Bank",
+    "description": "Attijariwafa Bank is a Moroccan multinational banking and financial services company established through the merger of Wafabank and Banque Commerciale du Maroc. It operates in 27 countries across Africa and Europe, offering banking, asset management, insurance, and wealth management services.",
+    "sector": "Banking, financial services",
+    "ceo": "Mohamed El Kettani",
+    "founded": 2004,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": null,
+    "employees": 25754,
+    "stock_exchange": "Casablanca Stock Exchange (CSE: ATW)"
+  },
+  {
+    "ticker": "MNG",
+    "company_name": "Managem"
+  },
+  {
+    "ticker": "IAM",
+    "company_name": "Itissalat Al-Maghrib (Maroc Telecom)",
+    "description": "Itissalat Al-Maghrib (Maroc Telecom) is a leading telecommunications provider offering mobile, fixed-line, and internet services, including 4G+ mobile internet, optical fiber, cloud hosting, and digital solutions across Morocco and internationally.",
+    "sector": "Telecommunications Services",
+    "ceo": "Mohamed Benchaaboun",
+    "founded": null,
+    "headquarters": "Annakhil Avenue, Rabat, Morocco",
+    "revenue": "MAD 36.7 billion (2025)",
+    "employees": 8758,
+    "stock_exchange": "Euronext Paris (MA0000011488)"
+  },
+  {
+    "ticker": "MSA",
+    "company_name": "Marsa Maroc",
+    "description": "Marsa Maroc operates port terminals and manages logistics services across multiple ports in Morocco, focusing on international quality standards and efficient maritime operations.",
+    "sector": "Port Management",
+    "ceo": "Tarik EL AROUSSI",
+    "founded": 2006,
+    "headquarters": "175, Bd Zerktouni, Casablanca, Morocco",
+    "revenue": "MAD 5 billion (2024)",
+    "employees": 6092,
+    "stock_exchange": "Casablanca Stock Exchange (CSE: MSA)"
+  },
+  {
+    "ticker": "BCP",
+    "company_name": "Banque Centrale Populaire",
+    "description": "Banque Centrale Populaire (BCP) is a Morocco-based banking and financial services group established in 1961. It operates as a credit institution and provides banking, insurance, investment management services to individuals and businesses.",
+    "sector": "Financial Services",
+    "ceo": "Naziha Belkeziz",
+    "founded": 1961,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": null,
+    "employees": 2717,
+    "stock_exchange": "Casablanca Stock Exchange (BCP)"
+  },
+  {
+    "ticker": "BOA",
+    "company_name": "Bank of Africa",
+    "description": "Bank of Africa is a Moroccan bank headquartered in Casablanca, providing financial services including banking, asset management, and insurance. It operates both domestically and internationally through subsidiaries.",
+    "sector": "Financial services",
+    "ceo": "Othman Benjelloun",
+    "founded": 1959,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": null,
+    "employees": null,
+    "stock_exchange": "CSEMA:BOA"
+  },
+  {
+    "ticker": "TQM",
+    "company_name": "TAQA Morocco",
+    "description": "TAQA Morocco is the first independent power producer in Morocco, operating the largest private coal‑fired thermal power plant in the MENA region located in Jorf Lasfar. It supplies a significant share of Morocco’s electricity demand and is a subsidiary of the Abu Dhabi‑based TAQA Group.",
+    "sector": "Utilities / Power Generation",
+    "ceo": "Abdelmajid Iraqui Houssaini",
+    "founded": "1997",
+    "headquarters": "Moulay Abdallah, Casablanca‑Settat, Morocco",
+    "revenue": "$419 million (2023)",
+    "employees": 418,
+    "stock_exchange": "Casablanca Stock Exchange (ticker: TQM)"
+  },
+  {
+    "ticker": "GTM",
+    "company_name": "SGTM (Travaux Généraux de Construction de Casablanca)",
+    "name": "tavily_search_results_json",
+    "arguments": {
+      "query": "SGTM Travaux Généraux de Construction de Casablanca company description, sector, CEO, founded year, headquarters, revenue, employee count, stock exchange ticker"
+    }
+  },
+  {
+    "ticker": "LHM",
+    "company_name": "LafargeHolcim Maroc"
+  },
+  {
+    "ticker": "CMA",
+    "company_name": "Ciments du Maroc",
+    "description": "Ciments du Maroc is a Moroccan company that produces cement and ready-made concrete. Its main business activity involves the manufacturing and distribution of various types of cement and concrete products for the construction industry.",
+    "sector": "building materials",
+    "ceo": "Matteo Rozzanigo",
+    "founded": 1951,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": "MAD 4.14 billion (approximately $451.29 million) for the year 2025",
+    "employees": null,
+    "stock_exchange": "Casablanca Stock Exchange (CSE) under the ticker symbol CMA"
+  },
+  {
+    "ticker": "TGC",
+    "company_name": "TGCC",
+    "description": "TGCC is a leading construction company founded in 1991, specializing in industrial, public, and building works across various sectors including residential, hospitality, commercial, industrial, administrative, and infrastructure projects.",
+    "sector": "Construction",
+    "ceo": "Mohammed Bouzoubaa",
+    "founded": 1991,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": "MAD 8 billion (estimated) in 2022",
+    "employees": 14000,
+    "stock_exchange": "Casablanca Stock Exchange (ticker symbol not provided)"
+  },
+  {
+    "ticker": "CSR",
+    "company_name": "Cosumar",
+    "description": "Cosumar is a Moroccan company that produces, packages, and markets sugar products. Its main business activity involves the extraction, refining, packaging, and marketing of sugar, operating as an integrated player in the agri-food sector.",
+    "sector": "Sugar and confectionery products industry, within the food processing sector",
+    "ceo": "Imad Ghammad",
+    "founded": 1929,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": "10.24 billion MAD (December 2024)",
+    "employees": 1248,
+    "stock_exchange": "Casablanca Stock Exchange (CSR)"
+  },
+  {
+    "ticker": "WAA",
+    "company_name": "Wafa Assurance",
+    "error": "1 validation error for CompanyResearch\n  Invalid JSON: EOF while parsing a value at line 2 column 16 [type=json_invalid, input_value='{\\n  \"description\":', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/json_invalid",
+    "description": null,
+    "sector": null,
+    "ceo": null,
+    "founded": null,
+    "headquarters": null,
+    "revenue": null,
+    "employees": null,
+    "stock_exchange": null
+  },
+  {
+    "ticker": "AKT",
+    "company_name": "Akdital",
+    "description": "The Akdital Group is the leading private clinic group in Morocco and the MENA region, operating a network of multidisciplinary and specialized health establishments. Its main business activity is providing a wide range of healthcare services, including cardiology, cardiac surgery, neurosurgery, oncology, and radiotherapy, with a focus on making high-quality health services accessible to a larger portion of the Moroccan population.",
+    "sector": "Healthcare",
+    "ceo": "Dr. Rochdi Talib",
+    "founded": 2010,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": "839 million MAD (2024)",
+    "employees": 2700,
+    "stock_exchange": "Casablanca Stock Exchange (AKT)"
+  },
+  {
+    "ticker": "TMA",
+    "company_name": "TotalEnergies Marketing Maroc",
+    "description": "TotalEnergies Marketing Maroc is a Moroccan company specializing in the distribution and marketing of oil and gas products across Morocco. It manages a network of service stations and offers a variety of related products and services.",
+    "sector": "Automotive Dealers and Gasoline Service Stations",
+    "ceo": "Abdesslam Rhnimi",
+    "founded": 1927,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": "16.75 billion MAD (TTM)",
+    "employees": 158,
+    "stock_exchange": "Casablanca Stock Exchange (TMA)"
+  },
+  {
+    "ticker": "GAZ",
+    "company_name": "Afriquia Gaz",
+    "description": "Afriquia Gaz is a Moroccan company specializing in the import, refining, storage, carriage, and distribution of liquefied petroleum gas (LPG). Its main business activity is providing energy solutions for domestic and professional markets through an extensive distribution network.",
+    "sector": "Oil and Gas",
+    "ceo": "Saïd El Baghdadi",
+    "founded": 1992,
+    "headquarters": "Casablanca, Morocco",
+    "revenue": null,
+    "employees": null,
+    "stock_exchange": "Casablanca Stock Exchange (GAZ)"
+  }
+]
