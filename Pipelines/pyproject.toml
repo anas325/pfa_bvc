@@ -8,6 +8,7 @@ dependencies = [
     "bs4>=0.0.2",
     "bvcscrap>=0.2.1",
     "feedparser>=6.0.11",
+    "html5lib>=1.1",
     "langchain>=1.2.15",
     "langchain-community>=0.4.1",
     "langchain-ollama>=1.1.0",

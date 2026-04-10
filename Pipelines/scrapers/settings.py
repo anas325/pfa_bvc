@@ -20,7 +20,7 @@ DOWNLOAD_DELAY = 0.2
 CONCURRENT_REQUESTS = 1
 
 FEEDS = {
-    "data/lematin_companies.json": {
+    "data/%(name)s_%(time)s.json": {
         "format": "json",
         "encoding": "utf-8",
         "indent": 2,

@@ -7,7 +7,7 @@ import urllib.parse
 
 class BkamSpider(scrapy.Spider):
     name = "bkam"
-    def __init__(self,start_d =  "01-01-2018" , end =  "31-08-2025" , *args, **kwargs):
+    def __init__(self,start_d =  "01-01-2018" , end =  "31-08-2018" , *args, **kwargs):
         super(BkamSpider, self).__init__(*args, **kwargs)
         self.start_d = start_d
         self.end = end
