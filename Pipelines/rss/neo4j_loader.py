@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 
 from neo4j import Driver
 
+from .models import ArticleSentiment
 from .rss_fetcher import Article
-from .sentiment import ArticleSentiment
 
 _CONSTRAINTS = [
     "CREATE CONSTRAINT article_url IF NOT EXISTS FOR (a:Article) REQUIRE a.url IS UNIQUE",
@@ -80,12 +80,10 @@ def store_article_with_sentiment(
     driver: Driver,
     article: Article,
     sentiment: ArticleSentiment,
-    matched_tickers: list[str],
-    matched_sectors: list[str],
 ) -> None:
     """
     Single call that MERGEs Feed, Article, SentimentScore, and all relationships.
-    Also creates MENTIONS relationships for each matched ticker.
+    Tickers and sectors are read directly from sentiment.mentioned_tickers/sectors.
     """
     analyzed_at = datetime.now(timezone.utc).isoformat()
     published_at = article.published_at.isoformat()
@@ -162,7 +160,7 @@ def store_article_with_sentiment(
     )
 
     # Article -> Company MENTIONS
-    for ticker in matched_tickers:
+    for ticker in sentiment.mentioned_tickers:
         driver.execute_query(
             """
             MATCH (a:Article {url: $article_url})
@@ -174,7 +172,7 @@ def store_article_with_sentiment(
         )
 
     # Article -> Sector MENTIONS
-    for sector in matched_sectors:
+    for sector in sentiment.mentioned_sectors:
         driver.execute_query(
             """
             MATCH (a:Article {url: $article_url})
@@ -188,7 +186,7 @@ def store_article_with_sentiment(
 
 def store_batch(
     driver: Driver,
-    results: list[tuple[Article, ArticleSentiment, list[str], list[str]]],
+    results: list[tuple[Article, ArticleSentiment]],
 ) -> None:
-    for article, sentiment, matched_tickers, matched_sectors in results:
-        store_article_with_sentiment(driver, article, sentiment, matched_tickers, matched_sectors)
+    for article, sentiment in results:
+        store_article_with_sentiment(driver, article, sentiment)

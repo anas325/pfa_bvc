@@ -1,8 +1,9 @@
 """
 RSS sentiment pipeline entry point.
 
-Fetches articles from configured RSS feeds, runs LLM sentiment analysis,
-and stores results in Neo4j. Resumable — articles already in Neo4j are skipped.
+Fetches articles from configured RSS feeds, runs LLM analysis (sentiment +
+entity extraction), and stores results in Neo4j. Resumable — articles already
+in Neo4j are skipped.
 
 Usage:
     cd Pipelines
@@ -11,6 +12,7 @@ Usage:
 
 import csv
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -23,10 +25,9 @@ ROOT = Path(__file__).parent.parent
 CONFIG_FILE = ROOT / "config" / "rss_feeds.yaml"
 COMPANIES_CSV = ROOT / "data" / "companies.csv"
 
-# Import after load_dotenv so env vars are available
 from db.db import get_driver
-from rss.rss_fetcher import fetch_all_feeds, match_article_entities
-from rss.sentiment import analyze_batch, build_sentiment_llm
+from rss.analyzer import build_analyzer
+from rss.rss_fetcher import fetch_all_feeds
 from rss.neo4j_loader import (
     ensure_constraints,
     get_already_processed_urls,
@@ -46,12 +47,20 @@ def load_companies() -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def extract_sectors(companies: list[dict]) -> list[str]:
+    return sorted({
+        re.sub(r"^MASI\s+", "", c.get("secteur", "")).strip()
+        for c in companies
+        if c.get("secteur", "").strip()
+    })
+
+
 def main() -> None:
     config = load_config()
     companies = load_companies()
+    sectors = extract_sectors(companies)
     llm_cfg = config.get("llm", {})
     batch_size = llm_cfg.get("batch_size", 5)
-    known_tickers = [c.get("ticker", "").strip() for c in companies if c.get("ticker", "").strip()]
 
     print("=== BVC RSS Sentiment Pipeline ===\n")
 
@@ -62,18 +71,14 @@ def main() -> None:
     ensure_constraints(driver)
     seed_companies(driver, companies)
     seed_sectors(driver, companies)
-    print(f"  Seeded {len(companies)} companies.\n")
+    print(f"  Seeded {len(companies)} companies, {len(sectors)} sectors.\n")
 
     print("Fetching RSS feeds...")
     articles = fetch_all_feeds(config)
     print()
 
-    matched = match_article_entities(articles, companies)
-
     done_urls = get_already_processed_urls(driver)
-    to_process = [
-        (a, t, s) for a, t, s in matched if a.url not in done_urls
-    ]
+    to_process = [a for a in articles if a.url not in done_urls]
     print(f"Resuming — {len(done_urls)} already analyzed, {len(to_process)} to analyze.\n")
 
     if not to_process:
@@ -81,23 +86,21 @@ def main() -> None:
         driver.close()
         return
 
-    sentiment_llm = build_sentiment_llm(llm_cfg)
+    analyzer = build_analyzer(llm_cfg, companies, sectors)
 
     for i in range(0, len(to_process), batch_size):
         batch = to_process[i : i + batch_size]
-        batch_articles = [a for a, _, _ in batch]
-        tickers_map = {a.url: t for a, t, _ in batch}
-        sectors_map = {a.url: s for a, _, s in batch}
+        results = []
 
-        results = analyze_batch(sentiment_llm, batch_articles, known_tickers, done_urls)
+        for article in batch:
+            try:
+                sentiment = analyzer.analyze(article)
+                results.append((article, sentiment))
+                done_urls.add(article.url)
+            except Exception as e:
+                print(f"  [WARN] Analysis failed for '{article.title[:60]}': {e}")
 
-        store_results = [
-            (article, sentiment, tickers_map[article.url], sectors_map[article.url])
-            for article, sentiment in results
-        ]
-        store_batch(driver, store_results)
-        done_urls.update(article.url for article, _ in results)
-
+        store_batch(driver, results)
         completed = min(i + batch_size, len(to_process))
         print(f"  {completed}/{len(to_process)} articles analyzed and stored.")
 

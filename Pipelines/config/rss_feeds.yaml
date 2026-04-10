@@ -16,6 +16,24 @@ feeds:
     topics: [economie, maroc, entreprises]
     enabled: true
 
+  - name: actu-maroc
+    url: https://actu-maroc.com/category/economie/feed/
+    language: fr
+    topics: [economie, maroc, entreprises]
+    enabled: true
+
+  - name: lavieeco
+    url: https://www.lavieeco.com/feed/
+    language: fr
+    topics: [economie, maroc, entreprises]
+    enabled: true
+
+  - name: lereporter
+    url: https://www.lereporter.ma/actualite-economie/feed/
+    language: fr
+    topics: [economie, maroc, entreprises]
+    enabled: true
+
   - name: LeMatin Economie
     url: https://lematin.ma/rss/categorie/economie
     language: fr
@@ -28,15 +46,16 @@ feeds:
     language: fr
     topics: [finance, maroc, bourse]
     enabled: true
+    scraper : challenge
 
   - name: Hespress Economie
-    url: https://www.hespress.com/feed/economie
+    url: https://fr.hespress.com/economie/feed
     language: fr
     topics: [economie, maroc]
     enabled: true
 
   - name: TelQuel Economie
-    url: https://telquel.ma/feed/economie
+    url: https://telquel.ma/feed/
     language: fr
     topics: [economie, maroc]
     enabled: true
@@ -69,6 +88,14 @@ fetcher:
 
 # LLM settings (mirrors search_config.yaml style)
 llm:
+  analyzer: llm             # implementation to use — see rss/analyzer.py
   base_url: https://openrouter.ai/api/v1
   model: openrouter/auto
   batch_size: 5             # articles per checkpoint/store cycle
+
+  # Controls whether and how the company/sector lists are fed to the LLM.
+  # Set enabled: false to skip entity extraction entirely (only sentiment returned).
+  entity_extraction:
+    enabled: true
+    include_companies: true   # pass ticker+name list to the prompt
+    include_sectors: true     # pass sector list to the prompt

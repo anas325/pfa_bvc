@@ -67,8 +67,18 @@ def _scrape_lematin(url: str, timeout: int) -> str:
     return tag.get_text(separator="\n", strip=True) if tag else ""
 
 
+def _scrape_challenge(url: str, timeout: int) -> str:
+    """Fetch a challend article and extract the body from .entry-content."""
+    resp = requests.get(url, timeout=timeout, headers={"User-Agent": feedparser.USER_AGENT})
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+    tag = soup.find(class_="entry-content")
+    return tag.get_text(separator="\n", strip=True) if tag else ""
+
+
 SCRAPERS: dict[str, Callable[[str, int], str]] = {
     "lematin": _scrape_lematin,
+    "challenge" : _scrape_challenge
 }
 
 
@@ -169,15 +179,20 @@ def fetch_all_feeds(config: dict) -> list[Article]:
     return all_articles
 
 
+_PUNCT_RE = re.compile(r"[^\w]+")
+
+SECTOR_OVERLAP_THRESHOLD = 0.4  # fraction of sector tokens that must appear in article
+
+
 def _normalize(text: str) -> str:
     """Lowercase and strip accents for language-agnostic matching."""
     nfkd = unicodedata.normalize("NFKD", text)
     return "".join(c for c in nfkd if not unicodedata.combining(c)).lower()
 
 
-def _wb(term: str) -> re.Pattern:
-    """Compile a case-insensitive word-boundary pattern for term."""
-    return re.compile(r"\b" + re.escape(term) + r"\b", re.IGNORECASE)
+def _tokenize(text: str) -> set[str]:
+    """Normalize and split into a set of word tokens."""
+    return set(_PUNCT_RE.split(_normalize(text))) - {""}
 
 
 def match_article_entities(
@@ -187,52 +202,60 @@ def match_article_entities(
 ) -> list[tuple[Article, list[str], list[str]]]:
     """
     Match articles against company tickers, names, and sector names using
-    word-boundary regex on normalized text.
+    token-set membership on normalized text.
+
+    - Tickers: exact token match (normalized).
+    - Company names: all name tokens (len > 1) must be present in article tokens.
+    - Sectors: ≥ SECTOR_OVERLAP_THRESHOLD of sector tokens (len > 2) must be present.
 
     Returns list of (Article, matched_tickers, matched_sectors).
     If require_match=True, drops articles with no company or sector matches.
     """
-    # --- company patterns ---
-    ticker_patterns: list[tuple[re.Pattern, str]] = []
-    name_patterns: list[tuple[re.Pattern, str]] = []
+    # --- precompute company lookups ---
+    ticker_lookup: list[tuple[str, str]] = []   # (normalized_ticker, ticker)
+    name_lookup: list[tuple[set[str], str]] = [] # (name_token_set, ticker)
     for c in companies:
         ticker = c.get("ticker", "").strip()
         name = c.get("libelle", "").strip()
         if ticker:
-            ticker_patterns.append((_wb(ticker), ticker))
+            ticker_lookup.append((_normalize(ticker), ticker))
         if name and len(name) > 3:
-            name_patterns.append((_wb(_normalize(name)), ticker))
+            name_toks = {t for t in _tokenize(name) if len(t) > 1}
+            if name_toks:
+                name_lookup.append((name_toks, ticker))
 
-    # --- sector patterns (unique, strip "MASI " prefix) ---
+    # --- precompute sector lookups (unique, strip "MASI " prefix) ---
     seen: set[str] = set()
-    sector_patterns: list[tuple[re.Pattern, str]] = []
+    sector_lookup: list[tuple[set[str], str]] = []  # (sector_token_set, sector)
     for c in companies:
         raw = c.get("secteur", "").strip()
         sector = re.sub(r"^MASI\s+", "", raw).strip()
-        if sector and sector not in seen and len(sector) > 3:
-            seen.add(sector)
-            sector_patterns.append((_wb(_normalize(sector)), sector))
+        if not sector or sector in seen:
+            continue
+        seen.add(sector)
+        sector_toks = {t for t in _tokenize(sector) if len(t) > 2}
+        if sector_toks:
+            sector_lookup.append((sector_toks, sector))
 
     results = []
     for article in articles:
-        haystack_raw = article.title + " " + article.full_text
-        haystack_norm = _normalize(haystack_raw)
+        article_tokens = _tokenize(article.title + " " + article.full_text)
 
         matched_tickers = list({
             ticker
-            for pattern, ticker in ticker_patterns
-            if pattern.search(haystack_raw)
+            for norm_ticker, ticker in ticker_lookup
+            if norm_ticker in article_tokens
         } | {
             ticker
-            for pattern, ticker in name_patterns
-            if pattern.search(haystack_norm)
+            for name_toks, ticker in name_lookup
+            if name_toks.issubset(article_tokens)
         })
 
-        matched_sectors = list({
+        matched_sectors = [
             sector
-            for pattern, sector in sector_patterns
-            if pattern.search(haystack_norm)
-        })
+            for sector_toks, sector in sector_lookup
+            if len(sector_toks & article_tokens) / len(sector_toks) >= SECTOR_OVERLAP_THRESHOLD
+        ]
 
         if require_match and not matched_tickers and not matched_sectors:
             continue
