@@ -1,0 +1,73 @@
+# RSS feeds for BVC (Casablanca Stock Exchange) news pipeline.
+# Each feed entry: name, url, language (fr/ar/en), topics list.
+# Set enabled: false to skip a feed without removing it.
+
+feeds:
+  # --- Moroccan financial press (French) ---
+  - name: Médias24 Economie
+    url: https://medias24.com/feed/economie
+    language: fr
+    topics: [economie, maroc, bourse]
+    enabled: true
+
+  - name: L'Economiste
+    url: https://www.leconomiste.com/rss.xml
+    language: fr
+    topics: [economie, maroc, entreprises]
+    enabled: true
+
+  - name: LeMatin Economie
+    url: https://lematin.ma/rss/categorie/economie
+    language: fr
+    topics: [bourse, maroc, finance]
+    enabled: true
+
+  - name: Challenge Maroc
+    url: https://www.challenge.ma/feed/
+    language: fr
+    topics: [finance, maroc, bourse]
+    enabled: true
+
+  - name: Hespress Economie
+    url: https://www.hespress.com/feed/economie
+    language: fr
+    topics: [economie, maroc]
+    enabled: true
+
+  - name: TelQuel Economie
+    url: https://telquel.ma/feed/economie
+    language: fr
+    topics: [economie, maroc]
+    enabled: true
+
+  # --- Arabic language ---
+  - name: Hespress Arabic
+    url: https://www.hespress.com/feed
+    language: ar
+    topics: [اقتصاد, المغرب]
+    enabled: true
+
+  # --- International (English) ---
+  - name: Reuters Business
+    url: https://feeds.reuters.com/reuters/businessNews
+    language: en
+    topics: [business, finance]
+    enabled: true
+
+  - name: Bloomberg Middle East
+    url: https://feeds.bloomberg.com/news/rss/middle-east
+    language: en
+    topics: [MENA, finance, markets]
+    enabled: false  # may be gated
+
+# Fetcher settings
+fetcher:
+  lookback_days: 7          # only fetch articles published within this window
+  request_timeout: 15       # seconds per feed request
+  user_agent: "BVC-Research-Bot/1.0"
+
+# LLM settings (mirrors search_config.yaml style)
+llm:
+  base_url: https://openrouter.ai/api/v1
+  model: openrouter/auto
+  batch_size: 5             # articles per checkpoint/store cycle
