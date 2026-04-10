@@ -21,6 +21,7 @@ feeds:
     language: fr
     topics: [bourse, maroc, finance]
     enabled: true
+    scraper: lematin
 
   - name: Challenge Maroc
     url: https://www.challenge.ma/feed/

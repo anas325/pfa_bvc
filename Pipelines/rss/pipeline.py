@@ -25,12 +25,13 @@ COMPANIES_CSV = ROOT / "data" / "companies.csv"
 
 # Import after load_dotenv so env vars are available
 from db.db import get_driver
-from rss.rss_fetcher import fetch_all_feeds, filter_by_company_mentions
+from rss.rss_fetcher import fetch_all_feeds, match_article_entities
 from rss.sentiment import analyze_batch, build_sentiment_llm
 from rss.neo4j_loader import (
     ensure_constraints,
     get_already_processed_urls,
     seed_companies,
+    seed_sectors,
     store_batch,
 )
 
@@ -60,17 +61,18 @@ def main() -> None:
     print("Setting up Neo4j schema...")
     ensure_constraints(driver)
     seed_companies(driver, companies)
+    seed_sectors(driver, companies)
     print(f"  Seeded {len(companies)} companies.\n")
 
     print("Fetching RSS feeds...")
     articles = fetch_all_feeds(config)
     print()
 
-    article_ticker_pairs = filter_by_company_mentions(articles, companies)
+    matched = match_article_entities(articles, companies)
 
     done_urls = get_already_processed_urls(driver)
     to_process = [
-        (a, t) for a, t in article_ticker_pairs if a.url not in done_urls
+        (a, t, s) for a, t, s in matched if a.url not in done_urls
     ]
     print(f"Resuming — {len(done_urls)} already analyzed, {len(to_process)} to analyze.\n")
 
@@ -83,13 +85,14 @@ def main() -> None:
 
     for i in range(0, len(to_process), batch_size):
         batch = to_process[i : i + batch_size]
-        batch_articles = [a for a, _ in batch]
-        tickers_map = {a.url: t for a, t in batch}
+        batch_articles = [a for a, _, _ in batch]
+        tickers_map = {a.url: t for a, t, _ in batch}
+        sectors_map = {a.url: s for a, _, s in batch}
 
         results = analyze_batch(sentiment_llm, batch_articles, known_tickers, done_urls)
 
         store_results = [
-            (article, sentiment, tickers_map[article.url])
+            (article, sentiment, tickers_map[article.url], sectors_map[article.url])
             for article, sentiment in results
         ]
         store_batch(driver, store_results)
