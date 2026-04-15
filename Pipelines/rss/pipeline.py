@@ -1,9 +1,9 @@
 """
 RSS sentiment pipeline entry point.
 
-Fetches articles from configured RSS feeds, runs LLM analysis (sentiment +
-entity extraction), and stores results in Neo4j. Resumable — articles already
-in Neo4j are skipped.
+Two-phase pipeline:
+  Phase 1 — Fetch RSS feeds and store raw articles in Neo4j (resumable).
+  Phase 2 — Run LLM analysis on stored articles that have no sentiment yet (resumable).
 
 Usage:
     cd Pipelines
@@ -13,7 +13,6 @@ Usage:
 import csv
 import os
 import re
-import sys
 from pathlib import Path
 
 import yaml
@@ -30,10 +29,12 @@ from rss.analyzer import build_analyzer
 from rss.rss_fetcher import fetch_all_feeds
 from rss.neo4j_loader import (
     ensure_constraints,
-    get_already_processed_urls,
+    get_stored_article_urls,
+    get_unanalyzed_articles,
     seed_companies,
     seed_sectors,
-    store_batch,
+    store_articles_raw,
+    store_sentiment_batch,
 )
 
 
@@ -73,36 +74,45 @@ def main() -> None:
     seed_sectors(driver, companies)
     print(f"  Seeded {len(companies)} companies, {len(sectors)} sectors.\n")
 
-    print("Fetching RSS feeds...")
+    # --- Phase 1: Fetch and store raw articles ---
+    print("Phase 1 — Fetching RSS feeds...")
     articles = fetch_all_feeds(config)
     print()
 
-    done_urls = get_already_processed_urls(driver)
-    to_process = [a for a in articles if a.url not in done_urls]
-    print(f"Resuming — {len(done_urls)} already analyzed, {len(to_process)} to analyze.\n")
+    stored_urls = get_stored_article_urls(driver)
+    new_articles = [a for a in articles if a.url not in stored_urls]
+    print(f"  {len(stored_urls)} already stored, {len(new_articles)} new to save.\n")
 
-    if not to_process:
-        print("Nothing new to analyze. Done.")
+    if new_articles:
+        store_articles_raw(driver, new_articles)
+        print(f"  Saved {len(new_articles)} articles.\n")
+
+    # --- Phase 2: Analyze stored articles ---
+    print("Phase 2 — Running LLM analysis...")
+    to_analyze = get_unanalyzed_articles(driver)
+    print(f"  {len(to_analyze)} articles pending analysis.\n")
+
+    if not to_analyze:
+        print("Nothing to analyze. Done.")
         driver.close()
         return
 
     analyzer = build_analyzer(llm_cfg, companies, sectors)
 
-    for i in range(0, len(to_process), batch_size):
-        batch = to_process[i : i + batch_size]
+    for i in range(0, len(to_analyze), batch_size):
+        batch = to_analyze[i : i + batch_size]
         results = []
 
         for article in batch:
             try:
                 sentiment = analyzer.analyze(article)
-                results.append((article, sentiment))
-                done_urls.add(article.url)
+                results.append((article.url, sentiment))
             except Exception as e:
                 print(f"  [WARN] Analysis failed for '{article.title[:60]}': {e}")
 
-        store_batch(driver, results)
-        completed = min(i + batch_size, len(to_process))
-        print(f"  {completed}/{len(to_process)} articles analyzed and stored.")
+        store_sentiment_batch(driver, results)
+        completed = min(i + batch_size, len(to_analyze))
+        print(f"  {completed}/{len(to_analyze)} articles analyzed and stored.")
 
     driver.close()
     print("\nDone.")
