@@ -17,6 +17,7 @@ from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 load_dotenv()
 
@@ -99,7 +100,7 @@ def main() -> None:
 
     analyzer = build_analyzer(llm_cfg, companies, sectors)
 
-    for i in range(0, len(to_analyze), batch_size):
+    for i in tqdm(range(0, len(to_analyze), batch_size)):
         batch = to_analyze[i : i + batch_size]
         results = []
 
