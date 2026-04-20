@@ -1,7 +1,14 @@
 import os
 from datetime import date
+from pathlib import Path
 
 import psycopg2
+
+_SQL_DIR = Path(__file__).parent.parent / "db" / "sql"
+
+
+def _sql(name: str) -> str:
+    return (_SQL_DIR / name).read_text(encoding="utf-8")
 
 
 class PostgresStockPipeline:
@@ -14,6 +21,7 @@ class PostgresStockPipeline:
             password=os.getenv("PG_PASSWORD", "postgres"),
         )
         self.cur = self.conn.cursor()
+        self.upsert_sql = _sql("upsert_stock_price_daily.sql")
 
     def close_spider(self, spider):
         self.conn.commit()
@@ -22,14 +30,7 @@ class PostgresStockPipeline:
 
     def process_item(self, item, spider):
         self.cur.execute(
-            """
-            INSERT INTO stock_prices (ticker, libelle, cours, variation, scraped_at)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (ticker, scraped_at) DO UPDATE
-                SET cours     = EXCLUDED.cours,
-                    variation = EXCLUDED.variation,
-                    libelle   = EXCLUDED.libelle
-            """,
+            self.upsert_sql,
             (
                 item.get("ticker", "").strip(),
                 item.get("libelle", "").strip(),

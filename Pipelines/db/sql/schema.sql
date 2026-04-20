@@ -25,6 +25,16 @@ CREATE TABLE IF NOT EXISTS stock_prices (
     PRIMARY KEY (ticker, date)
 );
 
+CREATE TABLE IF NOT EXISTS stock_prices_daily (
+    id           SERIAL PRIMARY KEY,
+    ticker       TEXT         NOT NULL,
+    libelle      TEXT,
+    cours        TEXT,
+    variation    TEXT,
+    scraped_at   DATE         NOT NULL DEFAULT CURRENT_DATE,
+    UNIQUE (ticker, scraped_at)
+);
+
 CREATE TABLE IF NOT EXISTS feeds (
     url         TEXT PRIMARY KEY,
     name        TEXT,
