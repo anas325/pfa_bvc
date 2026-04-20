@@ -36,10 +36,7 @@ class LematinSpider(scrapy.Spider):
 
         for row in rows:
             yield {
-                "libelle": row.css("div.infos p:nth-child(1) a::text").get("").strip(),
-                "secteur": row.css("div.infos p:nth-child(2) a::text").get("").strip(),
                 "ticker": (row.css("div.infos p:nth-child(3)::text").getall() or [""])[-1].strip(),
-                "siege_social": (row.css("div.infos p:nth-child(4)::text").getall() or [""])[-1].strip(),
                 "cours": (row.css("div.infocours div.a li.green::text, div.infocours div.a li.red::text").get() or "").strip(),
                 "variation": (row.css("div.infocours div.b li.green::text, div.infocours div.b li.red::text").get() or "").strip(),
             }
