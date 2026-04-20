@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-URI = "bolt://localhost:7687"
+URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 AUTH = ("neo4j", os.getenv("NEO4J_PASSWORD"))
 
 PG_DSN = {

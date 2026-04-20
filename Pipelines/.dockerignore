@@ -1,0 +1,7 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.env
+data/companies_research.json
+data/lematin_companies.json

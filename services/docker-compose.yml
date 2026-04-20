@@ -1,3 +1,21 @@
+x-airflow-common: &airflow-common
+  build: ./airflow
+  environment:
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres/airflow
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__WEBSERVER__SECRET_KEY: bvc_airflow_secret
+  env_file:
+    - ../Pipelines/.env
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - /var/run/docker.sock:/var/run/docker.sock
+  networks:
+    - bvc_net
+  depends_on:
+    - postgres
+  restart: unless-stopped
+
 services:
   neo4j:
     image: neo4j
@@ -8,6 +26,8 @@ services:
       NEO4J_AUTH: neo4j/adminadmin
     volumes:
       - neo4j_data:/data
+    networks:
+      - bvc_net
 
   postgres:
     image: postgres:16
@@ -19,6 +39,9 @@ services:
       POSTGRES_DB: pfa_bvc
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - bvc_net
 
   minio:
     image: minio/minio
@@ -31,6 +54,8 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    networks:
+      - bvc_net
 
   pgadmin:
     image: dpage/pgadmin4
@@ -43,11 +68,15 @@ services:
       - postgres
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - bvc_net
 
   createbuckets:
     image: minio/mc
     depends_on:
       - minio
+    networks:
+      - bvc_net
     entrypoint: >
       /bin/sh -c "
       sleep 5;
@@ -55,6 +84,43 @@ services:
       mc mb --ignore-existing local/scraped-data;
       exit 0;
       "
+
+  # Build-only target — provides the pfa_bvc_pipelines:latest image used by Airflow DAGs.
+  # Run: docker compose build pipelines
+  pipelines:
+    build: ../Pipelines
+    image: pfa_bvc_pipelines:latest
+    profiles: ["build"]
+
+  airflow-init:
+    <<: *airflow-common
+    restart: "no"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create -u admin -p admin -f Admin -l Admin -r Admin -e admin@admin.com || true
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      - airflow-init
+      - postgres
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    depends_on:
+      - airflow-init
+      - postgres
+
+networks:
+  bvc_net:
+    name: bvc_net
 
 volumes:
   neo4j_data:
