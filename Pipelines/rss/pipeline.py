@@ -33,6 +33,7 @@ from rss.neo4j_loader import (
     get_stored_article_urls,
     get_unanalyzed_articles,
     seed_companies,
+    seed_company_sectors,
     seed_sectors,
     store_articles_raw,
     store_sentiment_batch,
@@ -73,6 +74,7 @@ def main() -> None:
     ensure_constraints(driver)
     seed_companies(driver, companies)
     seed_sectors(driver, companies)
+    seed_company_sectors(driver, companies)
     print(f"  Seeded {len(companies)} companies, {len(sectors)} sectors.\n")
 
     # --- Phase 1: Fetch and store raw articles ---

@@ -12,6 +12,7 @@ Schema:
   (Article)-[:MENTIONS]->(Company)
   (Article)-[:MENTIONS]->(Sector)
   (Article)-[:HAS_SENTIMENT]->(SentimentScore)
+  (Company)-[:BELONGS_TO]->(Sector)
 """
 
 import re
@@ -62,6 +63,25 @@ def seed_sectors(driver: Driver, companies: list[dict]) -> None:
         driver.execute_query(
             "MERGE (s:Sector {name: $name})",
             parameters_={"name": sector},
+            database_="neo4j",
+        )
+
+
+def seed_company_sectors(driver: Driver, companies: list[dict]) -> None:
+    """MERGE (Company)-[:BELONGS_TO]->(Sector) from companies.csv."""
+    for c in companies:
+        ticker = c.get("ticker", "").strip()
+        raw = c.get("secteur", "").strip()
+        sector = re.sub(r"^MASI\s+", "", raw).strip()
+        if not ticker or not sector:
+            continue
+        driver.execute_query(
+            """
+            MATCH (c:Company {ticker: $ticker})
+            MATCH (s:Sector {name: $sector})
+            MERGE (c)-[:BELONGS_TO]->(s)
+            """,
+            parameters_={"ticker": ticker, "sector": sector},
             database_="neo4j",
         )
 
