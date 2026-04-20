@@ -21,6 +21,8 @@ class PostgresStockPipeline:
             password=os.getenv("PG_PASSWORD", "postgres"),
         )
         self.cur = self.conn.cursor()
+        self.cur.execute(_sql("create_stock_prices_daily.sql"))
+        self.conn.commit()
         self.upsert_sql = _sql("upsert_stock_price_daily.sql")
 
     def close_spider(self, spider):
@@ -29,14 +31,18 @@ class PostgresStockPipeline:
         self.conn.close()
 
     def process_item(self, item, spider):
-        self.cur.execute(
-            self.upsert_sql,
-            (
-                item.get("ticker", "").strip(),
-                item.get("libelle", "").strip(),
-                item.get("cours", "").strip(),
-                item.get("variation", "").strip(),
-                date.today().isoformat(),
-            ),
-        )
+        try:
+            self.cur.execute(
+                self.upsert_sql,
+                (
+                    item.get("ticker", "").strip(),
+                    item.get("libelle", "").strip(),
+                    item.get("cours", "").strip(),
+                    item.get("variation", "").strip(),
+                    date.today().isoformat(),
+                ),
+            )
+        except Exception:
+            self.conn.rollback()
+            raise
         return item
