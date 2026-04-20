@@ -1,4 +1,5 @@
 import io
+import unicodedata
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
@@ -44,14 +45,14 @@ class MinioFilesPipeline:
         year = _extract_year(date_str)
         object_name = f"ammc/{year}/{filename}"
 
-        response = requests.get(file_url, timeout=30)
+        response = requests.get(file_url, timeout=30, verify=False)
         response.raise_for_status()
 
         data = response.content
         content_type = response.headers.get("content-type", "application/octet-stream").split(";")[0]
 
         metadata = {
-            "title": item.get("title", ""),
+            "title": _to_ascii(item.get("title", "")),
             "source-url": file_url,
             "scraped-at": datetime.now(timezone.utc).isoformat(),
         }
@@ -72,6 +73,10 @@ class MinioFilesPipeline:
         item["minio_path"] = f"{self.bucket}/{object_name}"
         del item["file_url"]
         return item
+
+
+def _to_ascii(text: str) -> str:
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
 
 
 def _extract_year(date_str: str) -> str:
