@@ -18,6 +18,7 @@ with DAG(
         working_dir="/pipelines",
         environment={
             "SCRAPY_SETTINGS_MODULE": "scrapers.stock_settings",
+            "PYTHONPATH": "/pipelines",
             "PG_HOST": "postgres",
             "PG_PORT": "5432",
             "PG_DB": "pfa_bvc",

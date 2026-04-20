@@ -17,6 +17,7 @@ with DAG(
         command="uv run python -m rss.pipeline",
         working_dir="/pipelines",
         environment={
+            "PYTHONPATH": "/pipelines",
             "NEO4J_URI": "bolt://neo4j:7687",
             "NEO4J_PASSWORD": os.environ.get("NEO4J_PASSWORD", ""),
             "OPENROUTER_API_KEY": os.environ.get("OPENROUTER_API_KEY", ""),
