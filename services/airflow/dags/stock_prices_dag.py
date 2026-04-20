@@ -14,13 +14,10 @@ with DAG(
     DockerOperator(
         task_id="scrape_lematin",
         image="pfa_bvc_pipelines:latest",
-        command=[
-            "uv", "run", "scrapy",
-            "--settings", "scrapers.stock_settings",
-            "crawl", "lematin",
-        ],
+        command=["uv", "run", "scrapy", "crawl", "lematin"],
         working_dir="/pipelines",
         environment={
+            "SCRAPY_SETTINGS_MODULE": "scrapers.stock_settings",
             "PG_HOST": "postgres",
             "PG_PORT": "5432",
             "PG_DB": "pfa_bvc",
