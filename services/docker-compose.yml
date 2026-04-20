@@ -99,6 +99,21 @@ services:
     command:
       - -c
       - |
+        python - <<'EOF'
+        import psycopg2, time
+        for _ in range(15):
+            try:
+                conn = psycopg2.connect("postgresql://postgres:postgres@postgres/postgres")
+                conn.autocommit = True
+                conn.cursor().execute("CREATE DATABASE airflow")
+                conn.close()
+                break
+            except psycopg2.errors.DuplicateDatabase:
+                conn.close()
+                break
+            except Exception:
+                time.sleep(2)
+        EOF
         airflow db migrate
         airflow users create -u admin -p admin -f Admin -l Admin -r Admin -e admin@admin.com || true
 
