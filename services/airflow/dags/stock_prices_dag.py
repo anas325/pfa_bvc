@@ -15,8 +15,9 @@ with DAG(
         task_id="scrape_lematin",
         image="pfa_bvc_pipelines:latest",
         command=[
-            "uv", "run", "scrapy", "crawl", "lematin",
+            "uv", "run", "scrapy",
             "--settings", "scrapers.stock_settings",
+            "crawl", "lematin",
         ],
         working_dir="/pipelines",
         environment={
