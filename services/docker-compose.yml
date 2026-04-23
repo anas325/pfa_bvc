@@ -105,7 +105,7 @@ services:
       PG_USER: postgres
       PG_PASSWORD: postgres
     volumes:
-      - ./logs:/var/log/pfa_bvc:ro
+      - ./logs:/var/log/pfa_bvc
     depends_on:
       - postgres
     networks:

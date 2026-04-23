@@ -30,8 +30,11 @@ def sqlite_available() -> bool:
 def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     if not sqlite_available():
         return pd.DataFrame()
-    with sqlite_conn() as conn:
-        return pd.read_sql_query(sql, conn, params=params or None)
+    try:
+        with sqlite_conn() as conn:
+            return pd.read_sql_query(sql, conn, params=params or None)
+    except (sqlite3.OperationalError, pd.errors.DatabaseError):
+        return pd.DataFrame()
 
 
 # --- Postgres ---------------------------------------------------------------
