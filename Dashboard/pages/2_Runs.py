@@ -78,4 +78,23 @@ if not filtered.empty:
     if events.empty:
         st.info("No events logged for this run.")
     else:
+        metrics = events[events["metric_name"].notna()].copy()
+        if not metrics.empty:
+            st.subheader("Metrics")
+            chart_data = metrics.set_index("metric_name")["metric_value"]
+            st.bar_chart(chart_data)
+
+        level_order = ["error", "warning", "info"]
+        level_counts = (
+            events["level"]
+            .value_counts()
+            .reindex(level_order)
+            .dropna()
+            .astype(int)
+        )
+        if len(level_counts) > 1:
+            st.subheader("Event levels")
+            st.bar_chart(level_counts)
+
+        st.subheader("Events")
         st.dataframe(events, use_container_width=True, hide_index=True)

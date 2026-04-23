@@ -66,3 +66,30 @@ def stock_prices_today() -> Optional[int]:
 
 def articles_total() -> Optional[int]:
     return pg_scalar("SELECT COUNT(*) FROM articles")
+
+
+def pg_df(sql: str, params: tuple = ()) -> pd.DataFrame:
+    try:
+        with _pg_conn() as conn:
+            return pd.read_sql_query(sql, conn, params=params)
+    except Exception:
+        return pd.DataFrame()
+
+
+def stock_prices_history(days: int = 30) -> pd.DataFrame:
+    return pg_df(
+        "SELECT ticker, libelle, cours, variation, scraped_at "
+        "FROM stock_prices_daily "
+        "WHERE scraped_at >= CURRENT_DATE - (%s * INTERVAL '1 day') "
+        "ORDER BY scraped_at, ticker",
+        (days,),
+    )
+
+
+def daily_scrape_coverage() -> pd.DataFrame:
+    return pg_df(
+        "SELECT scraped_at, COUNT(DISTINCT ticker) AS tickers_scraped "
+        "FROM stock_prices_daily "
+        "WHERE scraped_at >= CURRENT_DATE - (30 * INTERVAL '1 day') "
+        "GROUP BY scraped_at ORDER BY scraped_at"
+    )

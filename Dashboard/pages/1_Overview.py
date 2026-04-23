@@ -20,6 +20,21 @@ def runs_24h() -> pd.DataFrame:
     )
 
 
+@st.cache_data(ttl=30)
+def runs_7d_trend() -> pd.DataFrame:
+    return query_df(
+        """
+        SELECT date(started_at) AS day, pipeline_name, status,
+               COUNT(*) AS runs,
+               COALESCE(SUM(rows_processed), 0) AS rows_processed
+        FROM pipeline_runs
+        WHERE started_at >= datetime('now', '-7 days')
+        GROUP BY day, pipeline_name, status
+        ORDER BY day
+        """
+    )
+
+
 @st.cache_data(ttl=5)
 def error_events_24h() -> pd.DataFrame:
     return query_df(
@@ -71,6 +86,27 @@ with right:
     pc1, pc2 = st.columns(2)
     pc1.metric("stock_prices_daily today", sp_today if sp_today is not None else "n/a")
     pc2.metric("articles (total)", arts if arts is not None else "n/a")
+
+st.divider()
+
+trend = runs_7d_trend()
+tl, tr = st.columns(2)
+
+with tl:
+    st.subheader("Run volume (7 days)")
+    if not trend.empty:
+        vol = trend.pivot_table(index="day", columns="status", values="runs", aggfunc="sum", fill_value=0)
+        st.bar_chart(vol)
+    else:
+        st.info("No data yet.")
+
+with tr:
+    st.subheader("Rows processed (7 days)")
+    if not trend.empty:
+        thru = trend.pivot_table(index="day", columns="pipeline_name", values="rows_processed", aggfunc="sum", fill_value=0)
+        st.line_chart(thru)
+    else:
+        st.info("No data yet.")
 
 st.divider()
 
