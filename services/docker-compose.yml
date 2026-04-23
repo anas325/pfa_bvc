@@ -139,7 +139,7 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
-    command: webserver
+    command: bash -c "rm -f /opt/airflow/airflow-webserver.pid && airflow webserver"
     ports:
       - "8080:8080"
     depends_on:
