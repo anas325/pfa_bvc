@@ -31,7 +31,7 @@ def query_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     if not sqlite_available():
         return pd.DataFrame()
     with sqlite_conn() as conn:
-        return pd.read_sql_query(sql, conn, params=params)
+        return pd.read_sql_query(sql, conn, params=params or None)
 
 
 # --- Postgres ---------------------------------------------------------------
@@ -71,7 +71,7 @@ def articles_total() -> Optional[int]:
 def pg_df(sql: str, params: tuple = ()) -> pd.DataFrame:
     try:
         with _pg_conn() as conn:
-            return pd.read_sql_query(sql, conn, params=params)
+            return pd.read_sql_query(sql, conn, params=params or None)
     except Exception:
         return pd.DataFrame()
 
