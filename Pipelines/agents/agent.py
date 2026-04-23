@@ -11,6 +11,7 @@ Required env vars:
 import csv
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
@@ -24,6 +25,10 @@ from langchain.agents import create_agent
 load_dotenv()
 
 ROOT = Path(__file__).parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from monitoring import PipelineLogger
 CONFIG_FILE = ROOT / "config" / "search_config.yaml"
 COMPANIES_CSV = ROOT / "data" / "companies.csv"
 
@@ -137,18 +142,34 @@ def main():
         companies = [c for c in companies if c["ticker"] not in done_tickers]
         print(f"Resuming — {len(done_tickers)} already done, {len(companies)} remaining.\n")
 
-    for i, company in enumerate(companies, 1):
-        print(f"[{i}/{len(companies)}]", end=" ")
-        try:
-            result = research_company(research_agent, extraction_llm, company, fields, output_model)
-            results.append(result)
-        except Exception as e:
-            print(f"  ERROR: {e}")
-            null_fields = {f["name"]: None for f in fields}
-            results.append({"ticker": company["ticker"], "company_name": company["company_name"], "error": str(e), **null_fields})
+    with PipelineLogger("agent") as log:
+        log.metric("companies_total", len(companies), stage="setup")
+        for i, company in enumerate(companies, 1):
+            ticker = company["ticker"]
+            print(f"[{i}/{len(companies)}]", end=" ")
+            try:
+                result = research_company(research_agent, extraction_llm, company, fields, output_model)
+                results.append(result)
+                log.increment_processed()
+                log.event(
+                    f"researched {company['company_name']}",
+                    stage="research",
+                    item_key=ticker,
+                )
+            except Exception as e:
+                print(f"  ERROR: {e}")
+                null_fields = {f["name"]: None for f in fields}
+                results.append({"ticker": ticker, "company_name": company["company_name"], "error": str(e), **null_fields})
+                log.increment_failed()
+                log.event(
+                    f"research failed for {ticker}: {e}",
+                    level="error",
+                    stage="research",
+                    item_key=ticker,
+                )
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=2)
 
     print(f"\nDone. Results saved to {output_path}")
 

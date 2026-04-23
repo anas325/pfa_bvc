@@ -92,6 +92,26 @@ services:
     image: pfa_bvc_pipelines:latest
     profiles: ["build"]
 
+  dashboard:
+    build: ../Dashboard
+    container_name: pfa_bvc_dashboard
+    ports:
+      - "0.0.0.0:8501:8501"
+    environment:
+      PIPELINE_LOG_DB: /var/log/pfa_bvc/pipeline_logs.db
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DB: pfa_bvc
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+    volumes:
+      - ./logs:/var/log/pfa_bvc:ro
+    depends_on:
+      - postgres
+    networks:
+      - bvc_net
+    restart: unless-stopped
+
   airflow-init:
     <<: *airflow-common
     restart: "no"

@@ -26,6 +26,7 @@ CONFIG_FILE = ROOT / "config" / "rss_feeds.yaml"
 COMPANIES_CSV = ROOT / "data" / "companies.csv"
 
 from db.db import get_driver
+from monitoring import PipelineLogger
 from rss.analyzer import build_analyzer
 from rss.rss_fetcher import fetch_all_feeds
 from rss.neo4j_loader import (
@@ -67,58 +68,85 @@ def main() -> None:
 
     print("=== BVC RSS Sentiment Pipeline ===\n")
 
-    driver = get_driver()
-    driver.verify_connectivity()
+    with PipelineLogger("rss_pipeline") as log:
+        driver = get_driver()
+        driver.verify_connectivity()
 
-    print("Setting up Neo4j schema...")
-    ensure_constraints(driver)
-    seed_companies(driver, companies)
-    seed_sectors(driver, companies)
-    seed_company_sectors(driver, companies)
-    print(f"  Seeded {len(companies)} companies, {len(sectors)} sectors.\n")
+        print("Setting up Neo4j schema...")
+        ensure_constraints(driver)
+        seed_companies(driver, companies)
+        seed_sectors(driver, companies)
+        seed_company_sectors(driver, companies)
+        print(f"  Seeded {len(companies)} companies, {len(sectors)} sectors.\n")
+        log.event(
+            f"seeded {len(companies)} companies, {len(sectors)} sectors",
+            stage="seed",
+        )
 
-    # --- Phase 1: Fetch and store raw articles ---
-    print("Phase 1 — Fetching RSS feeds...")
-    articles = fetch_all_feeds(config)
-    print()
+        # --- Phase 1: Fetch and store raw articles ---
+        print("Phase 1 — Fetching RSS feeds...")
+        log.event("fetching RSS feeds", stage="fetch")
+        articles = fetch_all_feeds(config)
+        log.metric("articles_fetched", len(articles), stage="fetch")
+        print()
 
-    stored_urls = get_stored_article_urls(driver)
-    new_articles = [a for a in articles if a.url not in stored_urls]
-    print(f"  {len(stored_urls)} already stored, {len(new_articles)} new to save.\n")
+        stored_urls = get_stored_article_urls(driver)
+        new_articles = [a for a in articles if a.url not in stored_urls]
+        print(f"  {len(stored_urls)} already stored, {len(new_articles)} new to save.\n")
+        log.event(
+            f"{len(stored_urls)} already stored, {len(new_articles)} new",
+            stage="fetch",
+        )
 
-    if new_articles:
-        store_articles_raw(driver, new_articles)
-        print(f"  Saved {len(new_articles)} articles.\n")
+        if new_articles:
+            store_articles_raw(driver, new_articles)
+            log.metric("articles_stored", len(new_articles), stage="store")
+            print(f"  Saved {len(new_articles)} articles.\n")
 
-    # --- Phase 2: Analyze stored articles ---
-    print("Phase 2 — Running LLM analysis...")
-    to_analyze = get_unanalyzed_articles(driver)
-    print(f"  {len(to_analyze)} articles pending analysis.\n")
+        # --- Phase 2: Analyze stored articles ---
+        print("Phase 2 — Running LLM analysis...")
+        to_analyze = get_unanalyzed_articles(driver)
+        print(f"  {len(to_analyze)} articles pending analysis.\n")
+        log.event(f"{len(to_analyze)} articles pending analysis", stage="analyze")
 
-    if not to_analyze:
-        print("Nothing to analyze. Done.")
+        if not to_analyze:
+            print("Nothing to analyze. Done.")
+            driver.close()
+            return
+
+        analyzer = build_analyzer(llm_cfg, companies, sectors)
+
+        for i in tqdm(range(0, len(to_analyze), batch_size)):
+            batch = to_analyze[i : i + batch_size]
+            results = []
+
+            for article in batch:
+                try:
+                    sentiment = analyzer.analyze(article)
+                    results.append((article.url, sentiment))
+                    log.increment_processed()
+                except Exception as e:
+                    print(f"  [WARN] Analysis failed for '{article.title[:60]}': {e}")
+                    log.increment_failed()
+                    log.event(
+                        f"analysis failed for '{article.title[:80]}': {e}",
+                        level="warning",
+                        stage="analyze",
+                        item_key=article.url,
+                    )
+
+            store_sentiment_batch(driver, results)
+            completed = min(i + batch_size, len(to_analyze))
+            print(f"  {completed}/{len(to_analyze)} articles analyzed and stored.")
+            log.metric(
+                "analyzed_progress",
+                completed,
+                stage="analyze",
+                message=f"{completed}/{len(to_analyze)} analyzed",
+            )
+
         driver.close()
-        return
-
-    analyzer = build_analyzer(llm_cfg, companies, sectors)
-
-    for i in tqdm(range(0, len(to_analyze), batch_size)):
-        batch = to_analyze[i : i + batch_size]
-        results = []
-
-        for article in batch:
-            try:
-                sentiment = analyzer.analyze(article)
-                results.append((article.url, sentiment))
-            except Exception as e:
-                print(f"  [WARN] Analysis failed for '{article.title[:60]}': {e}")
-
-        store_sentiment_batch(driver, results)
-        completed = min(i + batch_size, len(to_analyze))
-        print(f"  {completed}/{len(to_analyze)} articles analyzed and stored.")
-
-    driver.close()
-    print("\nDone.")
+        print("\nDone.")
 
 
 if __name__ == "__main__":

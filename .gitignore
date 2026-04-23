@@ -10,3 +10,8 @@ wheels/
 .venv
 .claude
 .env
+
+# Pipeline monitoring SQLite files
+Services/logs/*.db
+Services/logs/*.db-wal
+Services/logs/*.db-shm
