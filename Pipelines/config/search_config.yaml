@@ -38,8 +38,8 @@ fields:
 
 # LLM settings
 llm:
-  base_url: https://openrouter.ai/api/v1
-  model: openrouter/auto   # swap to any model on OpenRouter
+  base_url: http://localhost:11434/v1
+  model: llama3.1:8b 
 
 # Search settings
 search:

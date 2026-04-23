@@ -89,8 +89,8 @@ fetcher:
 # LLM settings (mirrors search_config.yaml style)
 llm:
   analyzer: llm             # implementation to use — see rss/analyzer.py
-  base_url: https://openrouter.ai/api/v1
-  model: openrouter/auto
+  base_url: http://localhost:11434/v1
+  model: llama3.1:8b 
   batch_size: 5             # articles per checkpoint/store cycle
 
   # Controls whether and how the company/sector lists are fed to the LLM.
