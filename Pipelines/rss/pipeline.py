@@ -13,6 +13,7 @@ Usage:
 import csv
 import os
 import re
+import time
 from pathlib import Path
 
 import yaml
@@ -65,6 +66,7 @@ def main() -> None:
     sectors = extract_sectors(companies)
     llm_cfg = config.get("llm", {})
     batch_size = llm_cfg.get("batch_size", 5)
+    inter_article_delay: float = llm_cfg.get("inter_article_delay", 0)
 
     print("=== BVC RSS Sentiment Pipeline ===\n")
 
@@ -138,6 +140,8 @@ def main() -> None:
                     sentiment = analyzer.analyze(article)
                     results.append((article.url, sentiment))
                     log.increment_processed()
+                    if inter_article_delay > 0:
+                        time.sleep(inter_article_delay)
                 except Exception as e:
                     print(f"  [WARN] Analysis failed for '{article.title[:60]}': {e}")
                     log.increment_failed()

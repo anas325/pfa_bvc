@@ -11,6 +11,7 @@ To add a new implementation:
 
 import os
 import re
+import time
 from typing import Protocol, runtime_checkable
 
 from langchain_openai import ChatOpenAI
@@ -50,12 +51,19 @@ class LLMArticleAnalyzer:
         self._extraction_cfg: dict = llm_cfg.get("entity_extraction", {})
         self._companies = companies
         self._sectors = sectors
+        self._max_retries: int = llm_cfg.get("max_retries", 2)
+        self._retry_delay: float = llm_cfg.get("retry_delay", 5)
+
+        keep_alive = llm_cfg.get("keep_alive", None)
+        model_kwargs = {"keep_alive": keep_alive} if keep_alive is not None else {}
 
         llm = ChatOpenAI(
             base_url=llm_cfg.get("base_url", "https://openrouter.ai/api/v1"),
             api_key=os.getenv("OPENROUTER_API_KEY"),
             model=llm_cfg.get("model", "openrouter/auto"),
             temperature=0,
+            request_timeout=llm_cfg.get("request_timeout", 60),
+            model_kwargs=model_kwargs,
         )
         self._llm = llm.with_structured_output(ArticleSentiment)
 
@@ -109,7 +117,17 @@ class LLMArticleAnalyzer:
 
     def analyze(self, article: Article) -> ArticleSentiment:
         prompt = self._build_prompt(article)
-        return self._llm.invoke(prompt)
+        last_exc: Exception | None = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                return self._llm.invoke(prompt)
+            except Exception as e:
+                last_exc = e
+                if attempt < self._max_retries:
+                    delay = self._retry_delay * (2 ** attempt)
+                    print(f"  [RETRY] Attempt {attempt + 1} failed ({e}), retrying in {delay:.0f}s...")
+                    time.sleep(delay)
+        raise last_exc
 
 
 def build_analyzer(

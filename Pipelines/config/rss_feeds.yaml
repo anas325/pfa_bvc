@@ -93,6 +93,12 @@ llm:
   model: llama3.1:8b 
   batch_size: 5             # articles per checkpoint/store cycle
 
+  request_timeout: 120      # seconds per LLM call before giving up
+  keep_alive: 0             # unload model from VRAM after each call (Ollama-specific; omit for cloud APIs)
+  max_retries: 3            # retry a failed call this many times
+  retry_delay: 5            # base delay in seconds; doubles each attempt (5s → 10s → 20s)
+  inter_article_delay: 1    # seconds to pause between articles in the batch loop
+
   # Controls whether and how the company/sector lists are fed to the LLM.
   # Set enabled: false to skip entity extraction entirely (only sentiment returned).
   entity_extraction:
