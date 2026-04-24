@@ -9,9 +9,11 @@ To add a new implementation:
   2. Add an elif branch in build_analyzer() keyed to a new `analyzer:` value in rss_feeds.yaml.
 """
 
+import json
 import os
 import re
 import time
+import urllib.request
 from typing import Protocol, runtime_checkable
 
 from langchain_openai import ChatOpenAI
@@ -54,8 +56,14 @@ class LLMArticleAnalyzer:
         self._max_retries: int = llm_cfg.get("max_retries", 2)
         self._retry_delay: float = llm_cfg.get("retry_delay", 5)
 
-        keep_alive = llm_cfg.get("keep_alive", None)
-        model_kwargs = {"keep_alive": keep_alive} if keep_alive is not None else {}
+        # Build Ollama unload URL if keep_alive is configured.
+        # We call Ollama's native /api/generate endpoint directly after each invoke
+        # because keep_alive cannot be passed through the OpenAI-compatible layer.
+        self._ollama_unload_url: str | None = None
+        if llm_cfg.get("keep_alive") is not None:
+            base = llm_cfg.get("base_url", "").rstrip("/").removesuffix("/v1")
+            self._ollama_model = llm_cfg.get("model", "")
+            self._ollama_unload_url = f"{base}/api/generate"
 
         llm = ChatOpenAI(
             base_url=llm_cfg.get("base_url", "https://openrouter.ai/api/v1"),
@@ -63,7 +71,6 @@ class LLMArticleAnalyzer:
             model=llm_cfg.get("model", "openrouter/auto"),
             temperature=0,
             request_timeout=llm_cfg.get("request_timeout", 60),
-            model_kwargs=model_kwargs,
         )
         self._llm = llm.with_structured_output(ArticleSentiment)
 
@@ -115,12 +122,30 @@ class LLMArticleAnalyzer:
             f"Provide your structured analysis."
         )
 
+    def _unload_model(self) -> None:
+        if not self._ollama_unload_url:
+            return
+        try:
+            body = json.dumps({"model": self._ollama_model, "keep_alive": 0}).encode()
+            req = urllib.request.Request(
+                self._ollama_unload_url,
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+        except Exception:
+            pass
+
     def analyze(self, article: Article) -> ArticleSentiment:
         prompt = self._build_prompt(article)
         last_exc: Exception | None = None
         for attempt in range(self._max_retries + 1):
             try:
-                return self._llm.invoke(prompt)
+                result = self._llm.invoke(prompt)
+                self._unload_model()
+                return result
             except Exception as e:
                 last_exc = e
                 if attempt < self._max_retries:
