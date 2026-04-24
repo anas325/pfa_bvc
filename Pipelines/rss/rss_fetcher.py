@@ -100,19 +100,23 @@ def load_feeds_config(config_path: Path = CONFIG_FILE) -> dict:
         return yaml.safe_load(f)
 
 
-def fetch_feed(feed: dict, lookback_days: int, timeout: int) -> list[Article]:
-    """Fetch a single RSS/Atom feed, returning articles within the lookback window."""
+def fetch_feed(feed: dict, lookback_days: int, timeout: int) -> list[Article] | None:
+    """Fetch a single RSS/Atom feed, returning articles within the lookback window.
+
+    Returns None on fetch/parse error (caller should treat as failure),
+    or a list (possibly empty) when the feed was parsed successfully.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
 
     try:
         parsed = feedparser.parse(feed["url"], request_headers={"Connection": "close"})
     except Exception as e:
         print(f"  [WARN] Could not fetch feed '{feed['name']}': {e}")
-        return []
+        return None
 
     if parsed.get("bozo") and not parsed.get("entries"):
         print(f"  [WARN] Malformed feed '{feed['name']}': {parsed.get('bozo_exception', 'unknown error')}")
-        return []
+        return None
 
     articles = []
     for entry in parsed.get("entries", []):
@@ -150,10 +154,11 @@ def fetch_feed(feed: dict, lookback_days: int, timeout: int) -> list[Article]:
     return articles
 
 
-def fetch_all_feeds(config: dict) -> list[Article]:
+def fetch_all_feeds(config: dict) -> tuple[list[Article], list[str]]:
     """
     Fetch all enabled feeds from config, deduplicating articles by URL.
-    Returns articles sorted newest-first.
+    Returns (articles sorted newest-first, list of failed feed names).
+    A failed feed is one where fetch_feed returned None (network/parse error).
     """
     fetcher_cfg = config.get("fetcher", {})
     lookback_days = fetcher_cfg.get("lookback_days", 7)
@@ -162,21 +167,26 @@ def fetch_all_feeds(config: dict) -> list[Article]:
 
     seen_urls: set[str] = set()
     all_articles: list[Article] = []
+    failed_feeds: list[str] = []
 
     for feed in config.get("feeds", []):
         if not feed.get("enabled", True):
             continue
         print(f"  Fetching: {feed['name']} ...")
-        articles = fetch_feed(feed, lookback_days, timeout)
-        for article in articles:
+        result = fetch_feed(feed, lookback_days, timeout)
+        if result is None:
+            failed_feeds.append(feed["name"])
+            print(f"    [FAIL] Feed '{feed['name']}' could not be fetched.")
+            continue
+        for article in result:
             if article.url not in seen_urls:
                 seen_urls.add(article.url)
                 all_articles.append(article)
-        print(f"    {len(articles)} articles (before dedup)")
+        print(f"    {len(result)} articles (before dedup)")
 
     all_articles.sort(key=lambda a: a.published_at, reverse=True)
     print(f"  Total unique articles: {len(all_articles)}")
-    return all_articles
+    return all_articles, failed_feeds
 
 
 _PUNCT_RE = re.compile(r"[^\w]+")

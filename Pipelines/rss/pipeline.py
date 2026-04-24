@@ -86,9 +86,21 @@ def main() -> None:
         # --- Phase 1: Fetch and store raw articles ---
         print("Phase 1 — Fetching RSS feeds...")
         log.event("fetching RSS feeds", stage="fetch")
-        articles = fetch_all_feeds(config)
-        log.metric("articles_fetched", len(articles), stage="fetch")
+        articles, failed_feeds = fetch_all_feeds(config)
         print()
+
+        for name in failed_feeds:
+            log.event(f"feed failed: {name}", level="warning", stage="fetch")
+        if failed_feeds:
+            log.metric("feeds_failed", len(failed_feeds), stage="fetch")
+
+        enabled_count = sum(1 for f in config.get("feeds", []) if f.get("enabled", True))
+        if len(failed_feeds) == enabled_count:
+            raise RuntimeError(
+                f"All {enabled_count} enabled RSS feeds failed — aborting pipeline."
+            )
+
+        log.metric("articles_fetched", len(articles), stage="fetch")
 
         stored_urls = get_stored_article_urls(driver)
         new_articles = [a for a in articles if a.url not in stored_urls]
@@ -119,6 +131,7 @@ def main() -> None:
         for i in tqdm(range(0, len(to_analyze), batch_size)):
             batch = to_analyze[i : i + batch_size]
             results = []
+            batch_failed = 0
 
             for article in batch:
                 try:
@@ -134,8 +147,16 @@ def main() -> None:
                         stage="analyze",
                         item_key=article.url,
                     )
+                    batch_failed += 1
 
             store_sentiment_batch(driver, results)
+
+            if batch_failed == len(batch):
+                raise RuntimeError(
+                    f"LLM analysis failed for all {batch_failed} articles in batch "
+                    f"(starting at index {i}) — aborting pipeline."
+                )
+
             completed = min(i + batch_size, len(to_analyze))
             print(f"  {completed}/{len(to_analyze)} articles analyzed and stored.")
             log.metric(
