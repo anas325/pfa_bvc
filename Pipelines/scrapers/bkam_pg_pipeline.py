@@ -121,10 +121,11 @@ class BkamPostgresPipeline:
             self.log.event("missing currency — skipping row", level="warning", stage="process")
             return item
 
+        devises_raw = str(item.get("devise") or item.get("devises") or "")
+        unit = _parse_unit(devises_raw.split()[0]) if devises_raw else None
         country = str(item.get("pays", "") or "").strip() or None
-        unit = _parse_unit(item.get("unité") or item.get("unite") or item.get("unites"))
-        buy_rate = _parse_rate(item.get("cours_acheteur"))
-        sell_rate = _parse_rate(item.get("cours_vendeur"))
+        buy_rate = _parse_rate(item.get("achat_clientèle") or item.get("cours_acheteur"))
+        sell_rate = _parse_rate(item.get("vente_clientèle") or item.get("cours_vendeur"))
 
         self._batch.append((rate_date, currency, country, unit, buy_rate, sell_rate))
         if len(self._batch) >= BATCH_SIZE:
