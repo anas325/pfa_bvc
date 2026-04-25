@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import psycopg2
+from misc import currencies
 
 _PIPELINES_ROOT = Path(__file__).parent.parent
 if str(_PIPELINES_ROOT) not in sys.path:
@@ -40,6 +41,7 @@ class BkamPostgresPipeline:
     def open_spider(self, spider):
         self.log = PipelineLogger(f"bkam_rates:{spider.name}")
         self.log.__enter__()
+        self.shorthand_dict = currencies.shorthand
         try:
             self.conn = psycopg2.connect(
                 host=os.getenv("PG_HOST", "localhost"),
@@ -89,6 +91,7 @@ class BkamPostgresPipeline:
         currency = (
             str(item.get("devise") or item.get("devises") or "").strip()
         )
+        currency = self.shorthand_dict.get(currency, currency)
         if not currency:
             self.log.increment_failed()
             self.log.event("missing currency — skipping row", level="warning", stage="process")
