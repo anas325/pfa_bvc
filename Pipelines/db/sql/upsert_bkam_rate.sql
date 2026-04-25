@@ -1,5 +1,5 @@
 INSERT INTO bkam_rates (rate_date, currency, country, unit, buy_rate, sell_rate)
-VALUES (%s, %s, %s, %s, %s, %s)
+VALUES %s
 ON CONFLICT (rate_date, currency) DO UPDATE SET
     country   = EXCLUDED.country,
     unit      = EXCLUDED.unit,

@@ -4,7 +4,10 @@ from datetime import datetime
 from pathlib import Path
 
 import psycopg2
-from misc import currencies
+import psycopg2.extras
+from scrapers.misc import currencies
+
+BATCH_SIZE = 500
 
 _PIPELINES_ROOT = Path(__file__).parent.parent
 if str(_PIPELINES_ROOT) not in sys.path:
@@ -42,6 +45,7 @@ class BkamPostgresPipeline:
         self.log = PipelineLogger(f"bkam_rates:{spider.name}")
         self.log.__enter__()
         self.shorthand_dict = currencies.shorthand
+        self._batch = []
         try:
             self.conn = psycopg2.connect(
                 host=os.getenv("PG_HOST", "localhost"),
@@ -59,9 +63,29 @@ class BkamPostgresPipeline:
             self.log.__exit__(type(e), e, e.__traceback__)
             raise
 
+    def _flush(self):
+        if not self._batch:
+            return
+        try:
+            psycopg2.extras.execute_values(self.cur, self.upsert_sql, self._batch)
+            self.conn.commit()
+            self.log.increment_processed(len(self._batch))
+        except Exception as e:
+            self.conn.rollback()
+            self.log.increment_failed(len(self._batch))
+            self.log.event(
+                f"batch upsert failed ({len(self._batch)} rows): {e}",
+                level="error",
+                stage="upsert",
+            )
+            raise
+        finally:
+            self._batch.clear()
+
     def close_spider(self, spider):
         exc_info = (None, None, None)
         try:
+            self._flush()
             self.conn.commit()
             self.cur.close()
             self.conn.close()
@@ -102,20 +126,7 @@ class BkamPostgresPipeline:
         buy_rate = _parse_rate(item.get("cours_acheteur"))
         sell_rate = _parse_rate(item.get("cours_vendeur"))
 
-        try:
-            self.cur.execute(
-                self.upsert_sql,
-                (rate_date, currency, country, unit, buy_rate, sell_rate),
-            )
-            self.log.increment_processed()
-        except Exception as e:
-            self.conn.rollback()
-            self.log.increment_failed()
-            self.log.event(
-                f"upsert failed for {currency} {date_str}: {e}",
-                level="error",
-                stage="upsert",
-                item_key=currency,
-            )
-            raise
+        self._batch.append((rate_date, currency, country, unit, buy_rate, sell_rate))
+        if len(self._batch) >= BATCH_SIZE:
+            self._flush()
         return item
