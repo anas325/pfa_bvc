@@ -444,7 +444,11 @@ def domain_stats(cfg: DomainConfig, root: Path) -> dict:
     raw_paths = table.column("raw_html_path").to_pylist()
     fetched = sum(1 for p in raw_paths if p)
     timestamps = table.column("capture_timestamp").to_pylist()
-    pubs = table.column("original_published_date").to_pylist()
+    raw_pubs = table.column("original_published_date")
+    # Cast to timezone-naive before converting to avoid zoneinfo/tzdata lookup on Windows.
+    if pa.types.is_timestamp(raw_pubs.type) and raw_pubs.type.tz is not None:
+        raw_pubs = raw_pubs.cast(pa.timestamp(raw_pubs.type.unit))
+    pubs = raw_pubs.to_pylist()
 
     by_month: dict[str, int] = {}
     for p, t in zip(pubs, timestamps):
