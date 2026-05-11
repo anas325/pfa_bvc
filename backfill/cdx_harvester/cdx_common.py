@@ -428,12 +428,18 @@ def fetch_pending(cfg: DomainConfig, root: Path, logger, max_articles: int | Non
 def domain_stats(cfg: DomainConfig, root: Path) -> dict:
     out_dir = cfg.data_dir(root)
     index_path = out_dir / "index.parquet"
+    empty = {
+        "name": cfg.name, "indexed": 0, "fetched": 0, "pending": 0,
+        "oldest": None, "newest": None, "by_month": {},
+    }
     if not index_path.exists():
-        return {
-            "name": cfg.name, "indexed": 0, "fetched": 0, "pending": 0,
-            "oldest": None, "newest": None, "by_month": {},
-        }
-    table = pq.read_table(index_path, columns=["capture_timestamp", "raw_html_path", "original_published_date"])
+        return empty
+    try:
+        table = pq.read_table(index_path, columns=["capture_timestamp", "raw_html_path", "original_published_date"])
+    except (pa.ArrowInvalid, OSError) as e:
+        import logging
+        logging.getLogger(__name__).warning("could not read %s: %s", index_path, e)
+        return empty
     n = table.num_rows
     raw_paths = table.column("raw_html_path").to_pylist()
     fetched = sum(1 for p in raw_paths if p)
