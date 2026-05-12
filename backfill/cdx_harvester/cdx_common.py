@@ -4,10 +4,12 @@ from __future__ import annotations
 import gzip
 import json
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Iterable, Iterator
 
 import httpx
@@ -59,17 +61,19 @@ class DomainConfig:
 # ---------------------------------------------------------------------------
 
 class _RateLimiter:
-    """Simple token-bucket-ish limiter: ensures min interval between calls."""
+    """Thread-safe token-bucket-ish limiter: ensures min interval between calls."""
     def __init__(self, per_sec: float):
         self.min_interval = 1.0 / max(per_sec, 0.01)
         self._last = 0.0
+        self._lock = threading.Lock()
 
     def wait(self) -> None:
-        now = time.monotonic()
-        delta = now - self._last
-        if delta < self.min_interval:
-            time.sleep(self.min_interval - delta)
-        self._last = time.monotonic()
+        with self._lock:
+            now = time.monotonic()
+            delta = now - self._last
+            if delta < self.min_interval:
+                time.sleep(self.min_interval - delta)
+            self._last = time.monotonic()
 
 
 @retry(
@@ -359,8 +363,11 @@ def fetch_pending(cfg: DomainConfig, root: Path, logger, max_articles: int | Non
 
     limiter = _RateLimiter(cfg.fetch_rate_per_sec)
     headers = {"User-Agent": "cdx-harvester/0.1 (+research)"}
-    fetched = 0
     flush_every = 500
+
+    state_lock = threading.Lock()
+    fetched = 0
+    completed = 0  # total processed (success + skip)
 
     def save_progress():
         new_table = pa.Table.from_pylist(df, schema=INDEX_SCHEMA)
@@ -368,53 +375,65 @@ def fetch_pending(cfg: DomainConfig, root: Path, logger, max_articles: int | Non
         pq.write_table(new_table, tmp, compression="zstd")
         tmp.replace(index_path)
 
+    def process_one(i: int) -> bool:
+        """Fetch, write, parse one row. Returns True if a file was produced."""
+        row = df[i]
+        ts = row["capture_timestamp"]
+        url = row["url"]
+        digest = row["digest"] or "nodigest"
+        raw_path = _raw_path_for(out_dir, ts, digest)
+
+        if raw_path.exists():
+            try:
+                with gzip.open(raw_path, "rt", encoding="utf-8", errors="replace") as f:
+                    html = f.read()
+                pub = extract_published_date(html)
+            except OSError:
+                pub = None
+            with state_lock:
+                row["raw_html_path"] = str(raw_path.relative_to(out_dir))
+                if pub:
+                    row["original_published_date"] = pub
+            return True
+
+        limiter.wait()
+        try:
+            content = _fetch_capture(client, url, ts)
+        except httpx.HTTPError as e:
+            logger.warning("fetch failed [%s] %s %s -> %s", ts, url, type(e).__name__, e)
+            return False
+
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        with gzip.open(raw_path, "wb", compresslevel=6) as f:
+            f.write(content)
+
+        try:
+            pub = extract_published_date(content.decode("utf-8", errors="replace"))
+        except Exception:
+            pub = None
+
+        with state_lock:
+            row["raw_html_path"] = str(raw_path.relative_to(out_dir))
+            if pub:
+                row["original_published_date"] = pub
+        return True
+
     with httpx.Client(headers=headers, follow_redirects=True) as client:
-        for n, i in enumerate(pending_idx, 1):
-            row = df[i]
-            ts = row["capture_timestamp"]
-            url = row["url"]
-            digest = row["digest"] or "nodigest"
-            raw_path = _raw_path_for(out_dir, ts, digest)
-
-            if raw_path.exists():
-                # File already on disk (e.g. interrupted prior run) — link it back, parse date.
-                row["raw_html_path"] = str(raw_path.relative_to(out_dir))
-                try:
-                    with gzip.open(raw_path, "rt", encoding="utf-8", errors="replace") as f:
-                        html = f.read()
-                    pub = extract_published_date(html)
-                    if pub:
-                        row["original_published_date"] = pub
-                except OSError:
-                    pass
-                fetched += 1
-            else:
-                limiter.wait()
-                try:
-                    content = _fetch_capture(client, url, ts)
-                except httpx.HTTPError as e:
-                    logger.warning("fetch failed [%s] %s %s -> %s", ts, url, type(e).__name__, e)
-                    continue
-
-                raw_path.parent.mkdir(parents=True, exist_ok=True)
-                with gzip.open(raw_path, "wb", compresslevel=6) as f:
-                    f.write(content)
-
-                row["raw_html_path"] = str(raw_path.relative_to(out_dir))
-                try:
-                    html = content.decode("utf-8", errors="replace")
-                    pub = extract_published_date(html)
-                    if pub:
-                        row["original_published_date"] = pub
-                except Exception:
-                    pass
-                fetched += 1
-
-            if n % 50 == 0:
-                logger.info("fetched %d / %d", n, len(pending_idx))
-            if n % flush_every == 0:
-                save_progress()
-                logger.info("checkpoint written at %d", n)
+        with ThreadPoolExecutor(max_workers=cfg.fetch_concurrency) as pool:
+            futures = {pool.submit(process_one, i): i for i in pending_idx}
+            for future in as_completed(futures):
+                ok = future.result()
+                with state_lock:
+                    if ok:
+                        fetched += 1
+                    completed += 1
+                    n = completed
+                if n % 50 == 0:
+                    logger.info("fetched %d / %d", n, len(pending_idx))
+                if n % flush_every == 0:
+                    with state_lock:
+                        save_progress()
+                    logger.info("checkpoint written at %d", n)
 
     save_progress()
     logger.info("phase=fetch done: %d articles fetched in this run", fetched)
