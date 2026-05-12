@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CDX Harvester</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  body { font: 14px/1.45 -apple-system, system-ui, sans-serif; margin: 24px; color: #1a1a1a; background: #fafafa; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: #666; margin-bottom: 24px; font-size: 13px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .card { background: white; border: 1px solid #e3e3e3; border-radius: 8px; padding: 14px 18px; }
+  .card .label { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .card .val { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .card .sub-val { font-size: 12px; color: #999; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #e3e3e3; border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: right; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #555; }
+  tr:last-child td { border-bottom: none; }
+  .chart-wrap { background: white; border: 1px solid #e3e3e3; border-radius: 8px; padding: 18px; margin-bottom: 24px; height: 320px; }
+  .bar { display: inline-block; height: 8px; background: #4f8cff; border-radius: 4px; vertical-align: middle; }
+  .muted { color: #999; }
+  .refresh { float: right; font-size: 12px; color: #888; }
+  .cov-bar-bg { display: inline-block; width: 60px; height: 7px; background: #eee; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
+  .cov-bar-fill { display: inline-block; height: 7px; background: #34c77b; border-radius: 4px; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; vertical-align: middle; }
+  .badge-active { background: #e8f7ef; color: #1a8f52; }
+  .badge-idle   { background: #f5f5f5; color: #999; }
+</style>
+</head>
+<body>
+<h1>CDX Harvester <span class="refresh" id="refresh">loading…</span></h1>
+<div class="sub">Wayback CDX harvest progress across registered domains. Auto-refreshes every 10 s.</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">Indexed</div>
+    <div class="val" id="t-indexed">–</div>
+  </div>
+  <div class="card">
+    <div class="label">Fetched</div>
+    <div class="val" id="t-fetched">–</div>
+  </div>
+  <div class="card">
+    <div class="label">Pending</div>
+    <div class="val" id="t-pending">–</div>
+  </div>
+  <div class="card">
+    <div class="label">Disk usage</div>
+    <div class="val" id="t-disk">–</div>
+  </div>
+  <div class="card">
+    <div class="label">Fetch speed</div>
+    <div class="val" id="t-rate">–</div>
+    <div class="sub-val">articles / hr</div>
+  </div>
+</div>
+
+<div class="chart-wrap"><canvas id="byMonth"></canvas></div>
+
+<table id="domains">
+  <thead>
+    <tr>
+      <th>Domain</th>
+      <th>Indexed</th>
+      <th>Fetched</th>
+      <th>Pending</th>
+      <th>Progress</th>
+      <th>Range</th>
+      <th>Disk</th>
+      <th>Date cov.</th>
+      <th>Speed (art/hr)</th>
+      <th>ETA</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+function fmtBytes(b) {
+  if (b == null || b === 0) return '<span class="muted">—</span>';
+  if (b < 1024) return b + ' B';
+  if (b < 1024 ** 2) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1024 ** 3) return (b / 1024 ** 2).toFixed(1) + ' MB';
+  return (b / 1024 ** 3).toFixed(2) + ' GB';
+}
+
+function fmtETA(hours) {
+  if (hours == null) return '<span class="muted">—</span>';
+  if (hours < 1/60) return '< 1 min';
+  if (hours < 1) return Math.round(hours * 60) + ' min';
+  if (hours < 24) return hours.toFixed(1) + ' h';
+  return (hours / 24).toFixed(1) + ' d';
+}
+
+function covBar(withDate, total) {
+  if (!total) return '<span class="muted">—</span>';
+  const pct = Math.round(100 * withDate / total);
+  return `<span class="cov-bar-bg"><span class="cov-bar-fill" style="width:${pct}%"></span></span>${pct}%`;
+}
+
+let chart;
+async function load() {
+  const r = await fetch('/api/stats');
+  const data = await r.json();
+
+  document.getElementById('t-indexed').textContent = data.total.indexed.toLocaleString();
+  document.getElementById('t-fetched').textContent = data.total.fetched.toLocaleString();
+  document.getElementById('t-pending').textContent = data.total.pending.toLocaleString();
+  document.getElementById('t-disk').innerHTML = fmtBytes(data.total.disk_bytes);
+  const rate = data.total.fetch_rate_per_hour;
+  document.getElementById('t-rate').textContent = rate > 0 ? Math.round(rate).toLocaleString() : '0';
+  document.getElementById('refresh').textContent = 'updated ' + new Date().toLocaleTimeString();
+
+  const tbody = document.querySelector('#domains tbody');
+  tbody.innerHTML = '';
+  for (const d of data.domains) {
+    const pct = d.indexed ? Math.round(100 * d.fetched / d.indexed) : 0;
+    const range = d.oldest ? (d.oldest.slice(0, 8) + ' → ' + d.newest.slice(0, 8)) : '<span class="muted">—</span>';
+    const speedBadge = d.fetch_rate_per_hour > 0
+      ? `<span class="badge badge-active">▶ ${Math.round(d.fetch_rate_per_hour).toLocaleString()}</span>`
+      : `<span class="badge badge-idle">idle</span>`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${d.name}</td>
+      <td>${d.indexed.toLocaleString()}</td>
+      <td>${d.fetched.toLocaleString()}</td>
+      <td>${d.pending.toLocaleString()}</td>
+      <td><span class="bar" style="width:${pct}px"></span> ${pct}%</td>
+      <td>${range}</td>
+      <td>${fmtBytes(d.disk_bytes)}</td>
+      <td>${covBar(d.with_date, d.with_date + d.without_date)}</td>
+      <td>${speedBadge}</td>
+      <td>${fmtETA(d.eta_hours)}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  const labels = Object.keys(data.by_month);
+  const values = Object.values(data.by_month);
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = values;
+    chart.update();
+  } else {
+    chart = new Chart(document.getElementById('byMonth'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Articles per month', data: values, backgroundColor: '#4f8cff' }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+    });
+  }
+}
+load();
+setInterval(load, 10000);
+</script>
+</body>
+</html>

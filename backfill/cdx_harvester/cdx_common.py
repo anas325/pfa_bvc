@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import re
 import threading
 import time
@@ -444,12 +445,45 @@ def fetch_pending(cfg: DomainConfig, root: Path, logger, max_articles: int | Non
 # Stats helpers (used by dashboard)
 # ---------------------------------------------------------------------------
 
+def _dir_size_bytes(path: Path) -> int:
+    total = 0
+    if not path.exists():
+        return 0
+    for dirpath, _, filenames in os.walk(path):
+        for fname in filenames:
+            try:
+                total += os.path.getsize(os.path.join(dirpath, fname))
+            except OSError:
+                pass
+    return total
+
+
+def _recent_fetch_rate(raw_dir: Path, window_secs: int = 3600) -> float:
+    """Count .html.gz files modified within window_secs; result = articles per hour."""
+    if not raw_dir.exists():
+        return 0.0
+    now = time.time()
+    count = 0
+    for dirpath, _, filenames in os.walk(raw_dir):
+        for fname in filenames:
+            if not fname.endswith(".html.gz"):
+                continue
+            try:
+                if now - os.path.getmtime(os.path.join(dirpath, fname)) <= window_secs:
+                    count += 1
+            except OSError:
+                pass
+    return count * (3600 / window_secs)
+
+
 def domain_stats(cfg: DomainConfig, root: Path) -> dict:
     out_dir = cfg.data_dir(root)
     index_path = out_dir / "index.parquet"
     empty = {
         "name": cfg.name, "indexed": 0, "fetched": 0, "pending": 0,
         "oldest": None, "newest": None, "by_month": {},
+        "disk_bytes": 0, "with_date": 0, "without_date": 0,
+        "fetch_rate_per_hour": 0.0, "eta_hours": None,
     }
     if not index_path.exists():
         return empty
@@ -470,23 +504,42 @@ def domain_stats(cfg: DomainConfig, root: Path) -> dict:
     pubs = raw_pubs.to_pylist()
 
     by_month: dict[str, int] = {}
-    for p, t in zip(pubs, timestamps):
+    with_date = 0
+    without_date = 0
+    for p, t, rp in zip(pubs, timestamps, raw_paths):
         # Prefer parsed publication date, fall back to capture timestamp.
         if p is not None:
             key = p.strftime("%Y-%m") if hasattr(p, "strftime") else str(p)[:7]
         elif t and len(t) >= 6:
             key = f"{t[:4]}-{t[4:6]}"
         else:
+            if rp:
+                without_date += 1
             continue
         by_month[key] = by_month.get(key, 0) + 1
+        if rp:
+            if p is not None:
+                with_date += 1
+            else:
+                without_date += 1
 
     nonempty_ts = [t for t in timestamps if t]
+    disk_bytes = _dir_size_bytes(out_dir)
+    fetch_rate = _recent_fetch_rate(out_dir / "raw")
+    pending = n - fetched
+    eta_hours = pending / fetch_rate if fetch_rate > 0 else None
+
     return {
         "name": cfg.name,
         "indexed": n,
         "fetched": fetched,
-        "pending": n - fetched,
+        "pending": pending,
         "oldest": min(nonempty_ts) if nonempty_ts else None,
         "newest": max(nonempty_ts) if nonempty_ts else None,
         "by_month": dict(sorted(by_month.items())),
+        "disk_bytes": disk_bytes,
+        "with_date": with_date,
+        "without_date": without_date,
+        "fetch_rate_per_hour": fetch_rate,
+        "eta_hours": eta_hours,
     }
