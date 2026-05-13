@@ -198,7 +198,7 @@ def write_index(cfg: DomainConfig, root: Path, logger) -> Path:
     exc = re.compile(cfg.exclude_regex) if cfg.exclude_regex else None
 
     # Buffered batch write — 50k rows per row-group is plenty.
-    batch_size = 50_000
+    batch_size = 15_000
     buf: list[dict] = []
     seen: set[tuple[str, str]] = set()  # (url, capture_timestamp) dedup safety
     writer: pq.ParquetWriter | None = None
