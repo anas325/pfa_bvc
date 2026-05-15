@@ -6,6 +6,11 @@ runs LLM sentiment analysis via rss.analyzer.LLMArticleAnalyzer,
 and writes results to PostgreSQL (primary) and optionally Neo4j.
 
 Resumable: articles already in PG are skipped.
+
+
+cd backfill && uv sync
+uv run python ingest.py --domain lematin --dry-run --limit 10
+uv run python ingest.py --domain lematin --batch-size 5 --limit 5
 """
 
 import gzip
