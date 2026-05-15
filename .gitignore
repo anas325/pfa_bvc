@@ -15,3 +15,6 @@ wheels/
 Services/logs/*.db
 Services/logs/*.db-wal
 Services/logs/*.db-shm
+
+
+.vscode
