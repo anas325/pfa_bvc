@@ -67,7 +67,7 @@ class DomainSpec:
 
 
 DOMAIN_REGISTRY: dict[str, DomainSpec] = {
-    "lematin":       DomainSpec("lematin",       "fr", ".article-desc"),
+    "lematin":       DomainSpec("lematin",       "fr", ".detail-article"),
     "challenge":     DomainSpec("challenge",     "fr", ".entry-content"),
     "lavieeco":      DomainSpec("lavieeco",      "fr", ".article-body"),
     "leconomiste":   DomainSpec("leconomiste",   "fr", ".field-items"),
