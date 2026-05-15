@@ -456,5 +456,66 @@ def ingest(
     print(f"  PG errors:        {stats['pg_errors']}")
 
 
+@app.command("debug-selectors")
+def debug_selectors(
+    domain: str = typer.Option(..., help="Domain key from DOMAIN_REGISTRY"),
+    data_dir: Path = typer.Option(Path("data")),
+    sample: int = typer.Option(5, help="Number of HTML files to inspect"),
+    candidates: str = typer.Option(
+        "",
+        help="Comma-separated extra CSS selectors to try alongside the registered one",
+    ),
+) -> None:
+    """Inspect sample HTML files and report which CSS selectors yield text."""
+    if domain not in DOMAIN_REGISTRY:
+        print(f"[ERROR] Unknown domain '{domain}'. Available: {', '.join(DOMAIN_REGISTRY)}")
+        raise typer.Exit(1)
+    spec = DOMAIN_REGISTRY[domain]
+
+    extra = [s.strip() for s in candidates.split(",") if s.strip()]
+    selectors = [spec.text_selector] + extra
+
+    rows = load_index(domain, data_dir)
+    domain_dir = data_dir / domain
+    print(f"Sampling {min(sample, len(rows))} of {len(rows)} rows for domain '{domain}'\n")
+
+    inspected = 0
+    for row in rows:
+        if inspected >= sample:
+            break
+        html = read_html(domain_dir, row["raw_html_path"])
+        if html is None:
+            print(f"  [MISSING] {row['raw_html_path']}")
+            continue
+
+        inspected += 1
+        print(f"  URL: {row['url']}")
+        print(f"  File: {row['raw_html_path']}  ({len(html):,} chars)")
+        print(f"  Title tag: {extract_title(html)[:80]!r}")
+
+        # Report hit/miss for each candidate selector
+        for sel in selectors:
+            text = extract_text(html, sel)
+            tag = "[registered]" if sel == spec.text_selector else "[candidate] "
+            if text:
+                preview = text[:120].replace("\n", " ")
+                print(f"  {tag} {sel!r}  => HIT  ({len(text)} chars) — {preview!r}")
+            else:
+                print(f"  {tag} {sel!r}  => miss")
+
+        # Show all class names present in the page to help spot the right selector
+        tree = HTMLParser(html)
+        classes: set[str] = set()
+        for node in tree.css("[class]"):
+            for cls in (node.attributes.get("class") or "").split():
+                classes.add(cls)
+        article_classes = sorted(c for c in classes if any(
+            kw in c.lower() for kw in ("article", "content", "body", "text", "entry", "desc", "post")
+        ))
+        if article_classes:
+            print(f"  Candidate classes: {article_classes}")
+        print()
+
+
 if __name__ == "__main__":
     app()
