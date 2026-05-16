@@ -70,3 +70,18 @@ CREATE TABLE IF NOT EXISTS article_sector_mentions (
     sector_name TEXT,
     PRIMARY KEY (article_url, sector_name)
 );
+
+CREATE TABLE IF NOT EXISTS commodities (
+    asset_key   TEXT,
+    date        DATE,
+    ticker      TEXT       NOT NULL,
+    name        TEXT,
+    category    TEXT,
+    open        NUMERIC,
+    high        NUMERIC,
+    low         NUMERIC,
+    close       NUMERIC,
+    adj_close   NUMERIC,
+    volume      NUMERIC,
+    PRIMARY KEY (asset_key, date)
+);
