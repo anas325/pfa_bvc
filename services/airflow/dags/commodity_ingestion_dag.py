@@ -23,7 +23,7 @@ with DAG(
     DockerOperator(
         task_id="ingest_commodities",
         image="pfa_bvc_pipelines:latest",
-        command="uv run python -m comodities.commodity_ingestion --mode daily",
+        command="uv run python comodities/commodity_ingestion.py --mode daily",
         working_dir="/pipelines",
         environment={
             "PYTHONPATH": "/pipelines",
