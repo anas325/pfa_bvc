@@ -6,7 +6,7 @@ RUN pip install uv
 
 WORKDIR /pipelines
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-install-project
 RUN uv run playwright install --with-deps chromium
 
