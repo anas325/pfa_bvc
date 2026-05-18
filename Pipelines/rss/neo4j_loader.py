@@ -41,7 +41,7 @@ def seed_companies(driver: Driver, companies: list[dict]) -> None:
     """MERGE all companies from companies.csv as :Company nodes."""
     for c in companies:
         ticker = c.get("ticker", "").strip()
-        name = c.get("libelle", "").strip()
+        name = c.get("company_name", "").strip()
         if not ticker:
             continue
         driver.execute_query(
