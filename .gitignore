@@ -18,3 +18,5 @@ Services/logs/*.db-shm
 
 
 .vscode
+
+Notebooks/signal_pipeline/data
