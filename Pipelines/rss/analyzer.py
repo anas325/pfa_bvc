@@ -18,7 +18,7 @@ from typing import Protocol, runtime_checkable
 
 from langchain_openai import ChatOpenAI
 
-from .models import ArticleSentiment
+from .models import ArticleSentiment, compute_fingerprint
 from .rss_fetcher import Article
 
 
@@ -109,6 +109,38 @@ class LLMArticleAnalyzer:
                 "Return only values that appear in the lists above.\n\n"
             )
 
+        event_block = ""
+        if extraction_enabled and self._extraction_cfg.get("include_events", True):
+            event_block = (
+                "Event classification:\n"
+                "Identify the PRIMARY financial event type from exactly one of:\n"
+                "  earnings_release       — financial results, revenue, profit, EBITDA\n"
+                "  dividend_announcement  — dividend payment or yield announcement\n"
+                "  capital_operation      — capital increase, share issuance, buyback\n"
+                "  debt_issuance          — bond, sukuk, credit facility\n"
+                "  ma_deal                — merger, acquisition, stake purchase, divestiture\n"
+                "  leadership_change      — CEO/board appointment or resignation\n"
+                "  regulatory_action      — AMMC/BKAM rulings, sanctions, authorizations\n"
+                "  strategic_plan         — multi-year plans, new business lines\n"
+                "  market_data            — index levels, trading volumes, market cap\n"
+                "  economic_indicator     — GDP, inflation, interest rate, trade balance\n"
+                "  project_contract       — public contracts, concessions, signed deals\n"
+                "  ipo_listing            — IPO, new listing, OPV/OPR\n"
+                "  other                  — if none of the above clearly applies\n"
+                "If a specific date for the event is stated in the article, set event_date as YYYY-MM-DD. "
+                "Otherwise leave event_date null.\n\n"
+            )
+
+        max_people = self._extraction_cfg.get("max_people", 5)
+        people_block = ""
+        if extraction_enabled and self._extraction_cfg.get("include_people", True):
+            people_block = (
+                f"Named people: List up to {max_people} named individuals (executives, ministers, "
+                f"regulators) with their title/role. Only include those directly relevant to the "
+                f"financial event described. Leave mentioned_people empty if no relevant individuals "
+                f"are named.\n\n"
+            )
+
         return (
             f"You are a financial news analyst specializing in the Casablanca Stock Exchange (BVC/MASI).\n\n"
             f"Analyze the following {lang_hint}-language article for financial sentiment as it relates "
@@ -117,6 +149,8 @@ class LLMArticleAnalyzer:
             f"{company_block}"
             f"{sector_block}"
             f"{entity_instruction}"
+            f"{event_block}"
+            f"{people_block}"
             f"Title: {article.title}\n\n"
             f"Content: {article.full_text}\n\n"
             f"Provide your structured analysis."
@@ -144,6 +178,7 @@ class LLMArticleAnalyzer:
         for attempt in range(self._max_retries + 1):
             try:
                 result = self._llm.invoke(prompt)
+                result.event_fingerprint = compute_fingerprint(result, article.published_at)
                 self._unload_model()
                 return result
             except Exception as e:
