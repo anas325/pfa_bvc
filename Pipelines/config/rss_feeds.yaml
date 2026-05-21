@@ -105,3 +105,6 @@ llm:
     enabled: true
     include_companies: true   # pass ticker+name list to the prompt
     include_sectors: true     # pass sector list to the prompt
+    include_events: true      # extract event_type and event_date
+    include_people: true      # extract named individuals (executives, officials)
+    max_people: 5             # cap on PersonMention list size

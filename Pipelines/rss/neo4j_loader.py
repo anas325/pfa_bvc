@@ -29,6 +29,8 @@ _CONSTRAINTS = [
     "CREATE CONSTRAINT company_ticker IF NOT EXISTS FOR (c:Company) REQUIRE c.ticker IS UNIQUE",
     "CREATE CONSTRAINT sector_name IF NOT EXISTS FOR (s:Sector) REQUIRE s.name IS UNIQUE",
     "CREATE CONSTRAINT sentiment_article_url IF NOT EXISTS FOR (s:SentimentScore) REQUIRE s.article_url IS UNIQUE",
+    "CREATE CONSTRAINT event_fingerprint IF NOT EXISTS FOR (e:Event) REQUIRE e.fingerprint IS UNIQUE",
+    "CREATE CONSTRAINT person_normalized_name IF NOT EXISTS FOR (p:Person) REQUIRE p.normalized_name IS UNIQUE",
 ]
 
 
@@ -174,6 +176,93 @@ def get_unanalyzed_articles(driver: Driver) -> list[Article]:
     return articles
 
 
+def _store_event_node(
+    driver: Driver,
+    article_url: str,
+    sentiment: ArticleSentiment,
+    analyzed_at: str,
+) -> None:
+    """MERGE an :Event node and link the article to it via :COVERS."""
+    if not sentiment.event_fingerprint:
+        return
+
+    driver.execute_query(
+        """
+        MERGE (e:Event {fingerprint: $fingerprint})
+        ON CREATE SET
+          e.event_type  = $event_type,
+          e.event_date  = $event_date,
+          e.first_seen  = $analyzed_at,
+          e.article_count = 1
+        ON MATCH SET
+          e.article_count = e.article_count + 1
+        WITH e
+        MATCH (a:Article {url: $article_url})
+        MERGE (a)-[:COVERS]->(e)
+        """,
+        parameters_={
+            "fingerprint":  sentiment.event_fingerprint,
+            "event_type":   sentiment.event_type,
+            "event_date":   sentiment.event_date,
+            "analyzed_at":  analyzed_at,
+            "article_url":  article_url,
+        },
+        database_="neo4j",
+    )
+
+    for ticker in sentiment.mentioned_tickers:
+        driver.execute_query(
+            """
+            MATCH (e:Event {fingerprint: $fingerprint})
+            MATCH (c:Company {ticker: $ticker})
+            MERGE (e)-[:INVOLVES]->(c)
+            """,
+            parameters_={"fingerprint": sentiment.event_fingerprint, "ticker": ticker},
+            database_="neo4j",
+        )
+
+
+def _store_person_nodes(
+    driver: Driver,
+    article_url: str,
+    sentiment: ArticleSentiment,
+) -> None:
+    """MERGE :Person nodes and link them to the article and mentioned companies."""
+    for person in sentiment.mentioned_people:
+        norm = person.normalized_name
+        if not norm:
+            continue
+
+        driver.execute_query(
+            """
+            MERGE (p:Person {normalized_name: $norm})
+            ON CREATE SET p.name = $name, p.role = $role
+            ON MATCH SET p.name = $name
+            WITH p
+            MATCH (a:Article {url: $article_url})
+            MERGE (a)-[:MENTIONS_PERSON]->(p)
+            """,
+            parameters_={
+                "norm":         norm,
+                "name":         person.name,
+                "role":         person.role,
+                "article_url":  article_url,
+            },
+            database_="neo4j",
+        )
+
+        for ticker in sentiment.mentioned_tickers:
+            driver.execute_query(
+                """
+                MATCH (p:Person {normalized_name: $norm})
+                MATCH (c:Company {ticker: $ticker})
+                MERGE (p)-[:ASSOCIATED_WITH]->(c)
+                """,
+                parameters_={"norm": norm, "ticker": ticker},
+                database_="neo4j",
+            )
+
+
 def store_sentiment(
     driver: Driver,
     article_url: str,
@@ -185,19 +274,23 @@ def store_sentiment(
     driver.execute_query(
         """
         MERGE (s:SentimentScore {article_url: $article_url})
-        SET s.sentiment = $sentiment,
-            s.score = $score,
-            s.confidence = $confidence,
-            s.reasoning = $reasoning,
-            s.analyzed_at = $analyzed_at
+        SET s.sentiment         = $sentiment,
+            s.score             = $score,
+            s.confidence        = $confidence,
+            s.reasoning         = $reasoning,
+            s.analyzed_at       = $analyzed_at,
+            s.event_type        = $event_type,
+            s.event_fingerprint = $event_fingerprint
         """,
         parameters_={
-            "article_url": article_url,
-            "sentiment": sentiment.sentiment,
-            "score": sentiment.score,
-            "confidence": sentiment.confidence,
-            "reasoning": sentiment.reasoning,
-            "analyzed_at": analyzed_at,
+            "article_url":       article_url,
+            "sentiment":         sentiment.sentiment,
+            "score":             sentiment.score,
+            "confidence":        sentiment.confidence,
+            "reasoning":         sentiment.reasoning,
+            "analyzed_at":       analyzed_at,
+            "event_type":        sentiment.event_type,
+            "event_fingerprint": sentiment.event_fingerprint,
         },
         database_="neo4j",
     )
@@ -233,6 +326,9 @@ def store_sentiment(
             parameters_={"article_url": article_url, "name": sector},
             database_="neo4j",
         )
+
+    _store_event_node(driver, article_url, sentiment, analyzed_at)
+    _store_person_nodes(driver, article_url, sentiment)
 
 
 def store_sentiment_batch(
