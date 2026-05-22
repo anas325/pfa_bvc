@@ -71,6 +71,44 @@ CREATE TABLE IF NOT EXISTS article_sector_mentions (
     PRIMARY KEY (article_url, sector_name)
 );
 
+CREATE TABLE IF NOT EXISTS events (
+    fingerprint   TEXT PRIMARY KEY,
+    event_type    TEXT,
+    event_date    DATE,
+    first_seen    TIMESTAMPTZ,
+    article_count INT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS people (
+    normalized_name TEXT PRIMARY KEY,
+    name            TEXT,
+    role            TEXT
+);
+
+CREATE TABLE IF NOT EXISTS article_events (
+    article_url       TEXT REFERENCES articles(url),
+    event_fingerprint TEXT REFERENCES events(fingerprint),
+    PRIMARY KEY (article_url, event_fingerprint)
+);
+
+CREATE TABLE IF NOT EXISTS article_people (
+    article_url     TEXT REFERENCES articles(url),
+    normalized_name TEXT REFERENCES people(normalized_name),
+    PRIMARY KEY (article_url, normalized_name)
+);
+
+CREATE TABLE IF NOT EXISTS event_companies (
+    event_fingerprint TEXT REFERENCES events(fingerprint),
+    ticker            TEXT REFERENCES companies(ticker),
+    PRIMARY KEY (event_fingerprint, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS person_companies (
+    normalized_name TEXT REFERENCES people(normalized_name),
+    ticker          TEXT REFERENCES companies(ticker),
+    PRIMARY KEY (normalized_name, ticker)
+);
+
 CREATE TABLE IF NOT EXISTS commodities (
     asset_key   TEXT,
     date        DATE,

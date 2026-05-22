@@ -156,12 +156,49 @@ def load_neo4j() -> dict:
             database_="neo4j",
         ).records]
 
+        events = [dict(r) for r in driver.execute_query(
+            "MATCH (e:Event) RETURN e.fingerprint AS fingerprint, e.event_type AS event_type, "
+            "e.event_date AS event_date, e.first_seen AS first_seen, e.article_count AS article_count",
+            database_="neo4j",
+        ).records]
+
+        people = [dict(r) for r in driver.execute_query(
+            "MATCH (p:Person) RETURN p.normalized_name AS normalized_name, p.name AS name, p.role AS role",
+            database_="neo4j",
+        ).records]
+
+        article_events = [dict(r) for r in driver.execute_query(
+            "MATCH (a:Article)-[:COVERS]->(e:Event) RETURN a.url AS article_url, e.fingerprint AS event_fingerprint",
+            database_="neo4j",
+        ).records]
+
+        article_people = [dict(r) for r in driver.execute_query(
+            "MATCH (a:Article)-[:MENTIONS_PERSON]->(p:Person) RETURN a.url AS article_url, p.normalized_name AS normalized_name",
+            database_="neo4j",
+        ).records]
+
+        event_companies = [dict(r) for r in driver.execute_query(
+            "MATCH (e:Event)-[:INVOLVES]->(c:Company) RETURN e.fingerprint AS event_fingerprint, c.ticker AS ticker",
+            database_="neo4j",
+        ).records]
+
+        person_companies = [dict(r) for r in driver.execute_query(
+            "MATCH (p:Person)-[:ASSOCIATED_WITH]->(c:Company) RETURN p.normalized_name AS normalized_name, c.ticker AS ticker",
+            database_="neo4j",
+        ).records]
+
     return {
         "feeds": feeds,
         "articles": articles,
         "sentiments": sentiments,
         "company_mentions": company_mentions,
         "sector_mentions": sector_mentions,
+        "events": events,
+        "people": people,
+        "article_events": article_events,
+        "article_people": article_people,
+        "event_companies": event_companies,
+        "person_companies": person_companies,
     }
 
 
@@ -218,6 +255,26 @@ def upsert_neo4j_data(cur, data: dict) -> None:
     for m in data["sector_mentions"]:
         cur.execute(_sql("upsert_sector_mention.sql"), (m["article_url"], m["sector_name"]))
 
+    for e in data["events"]:
+        cur.execute(_sql("upsert_event.sql"), (
+            e["fingerprint"], e["event_type"], e["event_date"], e["first_seen"], e["article_count"],
+        ))
+
+    for p in data["people"]:
+        cur.execute(_sql("upsert_person.sql"), (p["normalized_name"], p["name"], p["role"]))
+
+    for m in data["article_events"]:
+        cur.execute(_sql("upsert_article_event.sql"), (m["article_url"], m["event_fingerprint"]))
+
+    for m in data["article_people"]:
+        cur.execute(_sql("upsert_article_person.sql"), (m["article_url"], m["normalized_name"]))
+
+    for m in data["event_companies"]:
+        cur.execute(_sql("upsert_event_company.sql"), (m["event_fingerprint"], m["ticker"]))
+
+    for m in data["person_companies"]:
+        cur.execute(_sql("upsert_person_company.sql"), (m["normalized_name"], m["ticker"]))
+
 
 # ---------------------------------------------------------------------------
 # Main
@@ -234,7 +291,8 @@ def main() -> None:
     print("Dumping Neo4j...")
     neo4j_data = load_neo4j()
     print(f"  {len(neo4j_data['feeds'])} feeds, {len(neo4j_data['articles'])} articles, "
-          f"{len(neo4j_data['sentiments'])} sentiments")
+          f"{len(neo4j_data['sentiments'])} sentiments, "
+          f"{len(neo4j_data['events'])} events, {len(neo4j_data['people'])} people")
 
     print("Writing to PostgreSQL...")
     with get_pg_connection() as conn:
@@ -253,7 +311,8 @@ def main() -> None:
             upsert_neo4j_data(cur, neo4j_data)
             print(f"  Upserted {len(neo4j_data['feeds'])} feeds, "
                   f"{len(neo4j_data['articles'])} articles, "
-                  f"{len(neo4j_data['sentiments'])} sentiments")
+                  f"{len(neo4j_data['sentiments'])} sentiments, "
+                  f"{len(neo4j_data['events'])} events, {len(neo4j_data['people'])} people")
 
         conn.commit()
 

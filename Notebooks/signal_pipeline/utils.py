@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
+from neo4j import GraphDatabase
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -39,6 +40,26 @@ def get_connection() -> psycopg2.extensions.connection:
 def query(sql: str, params=None) -> pd.DataFrame:
     with get_connection() as conn:
         return pd.read_sql(sql, conn, params=params)
+
+
+# ---------------------------------------------------------------------------
+# Neo4j connection
+# ---------------------------------------------------------------------------
+NEO4J_URI  = os.getenv("NEO4J_URI",  "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASS = os.getenv("NEO4J_PASSWORD", "")
+
+
+def get_neo4j_driver():
+    return GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
+
+
+def neo4j_query(cypher: str, params: dict | None = None) -> pd.DataFrame:
+    """Run a Cypher query and return results as a DataFrame."""
+    with get_neo4j_driver() as driver:
+        result = driver.execute_query(cypher, parameters_=params or {}, database_="neo4j")
+        records = [dict(r) for r in result.records]
+    return pd.DataFrame(records) if records else pd.DataFrame()
 
 
 # ---------------------------------------------------------------------------
