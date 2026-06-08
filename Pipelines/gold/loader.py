@@ -1,147 +1,12 @@
-CREATE TABLE IF NOT EXISTS companies (
-    ticker          TEXT PRIMARY KEY,
-    company_name    TEXT,
-    sector          TEXT,
-    parent          TEXT,
-    description     TEXT,
-    ceo             TEXT,
-    founded         INT,
-    headquarters    TEXT,
-    revenue         TEXT,
-    employees       INT,
-    stock_exchange  TEXT,
-    siege_social    TEXT
-);
+import pandas as pd
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 
-CREATE TABLE IF NOT EXISTS stock_prices (
-    ticker      TEXT REFERENCES companies(ticker),
-    date        DATE,
-    close       NUMERIC,
-    open        NUMERIC,
-    high        NUMERIC,
-    low         NUMERIC,
-    volume      NUMERIC,
-    change_pct  NUMERIC,
-    PRIMARY KEY (ticker, date)
-);
+# ---------------------------------------------------------------------------
+# DDL
+# ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS stock_prices_daily (
-    id           SERIAL PRIMARY KEY,
-    ticker       TEXT         NOT NULL,
-    libelle      TEXT,
-    cours        TEXT,
-    variation    TEXT,
-    scraped_at   DATE         NOT NULL DEFAULT CURRENT_DATE,
-    UNIQUE (ticker, scraped_at)
-);
-
-CREATE TABLE IF NOT EXISTS feeds (
-    url         TEXT PRIMARY KEY,
-    name        TEXT,
-    language    TEXT
-);
-
-CREATE TABLE IF NOT EXISTS articles (
-    url             TEXT PRIMARY KEY,
-    title           TEXT,
-    published_at    TIMESTAMPTZ,
-    full_text       TEXT,
-    language        TEXT,
-    feed_url        TEXT REFERENCES feeds(url)
-);
-
-CREATE TABLE IF NOT EXISTS sentiment_scores (
-    article_url TEXT PRIMARY KEY REFERENCES articles(url),
-    sentiment   TEXT,
-    score       NUMERIC,
-    confidence  NUMERIC,
-    reasoning   TEXT,
-    analyzed_at TIMESTAMPTZ
-);
-
-CREATE TABLE IF NOT EXISTS article_company_mentions (
-    article_url TEXT REFERENCES articles(url),
-    ticker      TEXT REFERENCES companies(ticker),
-    PRIMARY KEY (article_url, ticker)
-);
-
-CREATE TABLE IF NOT EXISTS article_sector_mentions (
-    article_url TEXT,
-    sector_name TEXT,
-    PRIMARY KEY (article_url, sector_name)
-);
-
-CREATE TABLE IF NOT EXISTS events (
-    fingerprint   TEXT PRIMARY KEY,
-    event_type    TEXT,
-    event_date    DATE,
-    first_seen    TIMESTAMPTZ,
-    article_count INT NOT NULL DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS people (
-    normalized_name TEXT PRIMARY KEY,
-    name            TEXT,
-    role            TEXT
-);
-
-CREATE TABLE IF NOT EXISTS article_events (
-    article_url       TEXT REFERENCES articles(url),
-    event_fingerprint TEXT REFERENCES events(fingerprint),
-    PRIMARY KEY (article_url, event_fingerprint)
-);
-
-CREATE TABLE IF NOT EXISTS article_people (
-    article_url     TEXT REFERENCES articles(url),
-    normalized_name TEXT REFERENCES people(normalized_name),
-    PRIMARY KEY (article_url, normalized_name)
-);
-
-CREATE TABLE IF NOT EXISTS event_companies (
-    event_fingerprint TEXT REFERENCES events(fingerprint),
-    ticker            TEXT REFERENCES companies(ticker),
-    PRIMARY KEY (event_fingerprint, ticker)
-);
-
-CREATE TABLE IF NOT EXISTS person_companies (
-    normalized_name TEXT REFERENCES people(normalized_name),
-    ticker          TEXT REFERENCES companies(ticker),
-    PRIMARY KEY (normalized_name, ticker)
-);
-
-CREATE TABLE IF NOT EXISTS commodities (
-    asset_key   TEXT,
-    date        DATE,
-    ticker      TEXT       NOT NULL,
-    name        TEXT,
-    category    TEXT,
-    open        NUMERIC,
-    high        NUMERIC,
-    low         NUMERIC,
-    close       NUMERIC,
-    adj_close   NUMERIC,
-    volume      NUMERIC,
-    PRIMARY KEY (asset_key, date)
-);
-
-
-CREATE TABLE IF NOT EXISTS bkam_rates (
-    id         SERIAL PRIMARY KEY,
-    rate_date  DATE         NOT NULL,
-    currency   VARCHAR(10)  NOT NULL,
-    country    VARCHAR(100),
-    unit       INTEGER,
-    buy_rate   NUMERIC(12,4),
-    sell_rate  NUMERIC(12,4),
-    scraped_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    UNIQUE (rate_date, currency)
-);
-
--- ---------------------------------------------------------------------------
--- Gold layer — analytics-ready tables (managed by Pipelines/gold/loader.py)
--- Full refresh on every DAG run; do not modify manually.
--- ---------------------------------------------------------------------------
-
+_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS gold_daily_signals (
     ticker                              TEXT        NOT NULL,
     date                                DATE        NOT NULL,
@@ -155,7 +20,6 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     next_day_return                     NUMERIC,
     direction                           SMALLINT,
     has_news                            BOOLEAN     NOT NULL DEFAULT FALSE,
-    -- base sentiment/event features (13)
     news_count                          SMALLINT,
     avg_sentiment                       NUMERIC(8,5),
     std_sentiment                       NUMERIC(8,5),
@@ -169,7 +33,6 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     speculative_count                   SMALLINT,
     positive_ratio                      NUMERIC(8,5),
     negative_ratio                      NUMERIC(8,5),
-    -- rolling 3-day (9)
     news_count_r3d                      NUMERIC(8,4),
     avg_sentiment_r3d                   NUMERIC(8,5),
     std_sentiment_r3d                   NUMERIC(8,5),
@@ -179,7 +42,6 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     event_earnings_r3d                  NUMERIC(8,4),
     event_management_r3d                NUMERIC(8,4),
     event_legal_r3d                     NUMERIC(8,4),
-    -- rolling 7-day (9)
     news_count_r7d                      NUMERIC(8,4),
     avg_sentiment_r7d                   NUMERIC(8,5),
     std_sentiment_r7d                   NUMERIC(8,5),
@@ -189,7 +51,6 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     event_earnings_r7d                  NUMERIC(8,4),
     event_management_r7d                NUMERIC(8,4),
     event_legal_r7d                     NUMERIC(8,4),
-    -- LLM event types (13)
     llm_evt_capital_operation           SMALLINT,
     llm_evt_debt_issuance               SMALLINT,
     llm_evt_dividend_announcement       SMALLINT,
@@ -203,7 +64,6 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     llm_evt_project_contract            SMALLINT,
     llm_evt_regulatory_action           SMALLINT,
     llm_evt_strategic_plan              SMALLINT,
-    -- LLM event rolling 3-day (13)
     llm_evt_capital_operation_r3d       NUMERIC(8,4),
     llm_evt_debt_issuance_r3d           NUMERIC(8,4),
     llm_evt_dividend_announcement_r3d   NUMERIC(8,4),
@@ -217,7 +77,6 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     llm_evt_project_contract_r3d        NUMERIC(8,4),
     llm_evt_regulatory_action_r3d       NUMERIC(8,4),
     llm_evt_strategic_plan_r3d          NUMERIC(8,4),
-    -- LLM event rolling 7-day (13)
     llm_evt_capital_operation_r7d       NUMERIC(8,4),
     llm_evt_debt_issuance_r7d           NUMERIC(8,4),
     llm_evt_dividend_announcement_r7d   NUMERIC(8,4),
@@ -319,3 +178,51 @@ CREATE TABLE IF NOT EXISTS gold_sentiment_monthly (
     llm_evt_strategic_plan          INT,
     PRIMARY KEY (ticker, month_start)
 );
+"""
+
+_GOLD_TABLES = [
+    "gold_daily_signals",
+    "gold_company_dim",
+    "gold_event_facts",
+    "gold_event_company_bridge",
+    "gold_sentiment_weekly",
+    "gold_sentiment_monthly",
+]
+
+
+# ---------------------------------------------------------------------------
+# Public functions
+# ---------------------------------------------------------------------------
+
+def ensure_schema(engine: Engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(text(_SCHEMA_SQL))
+
+
+def full_refresh(engine: Engine, table_name: str, df: pd.DataFrame) -> None:
+    if table_name not in _GOLD_TABLES:
+        raise ValueError(f"Unknown gold table: {table_name}")
+    if df.empty:
+        print(f"  [{table_name}] skipped — no data")
+        return
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE TABLE {table_name}"))
+        df.to_sql(table_name, conn, if_exists="append", index=False, method="multi")
+    print(f"  [{table_name}] {len(df):,} rows written")
+
+
+def run_all(
+    engine: Engine,
+    signals_df: pd.DataFrame,
+    company_dim_df: pd.DataFrame,
+    event_facts_df: pd.DataFrame,
+    event_bridge_df: pd.DataFrame,
+    weekly_df: pd.DataFrame,
+    monthly_df: pd.DataFrame,
+) -> None:
+    full_refresh(engine, "gold_daily_signals", signals_df)
+    full_refresh(engine, "gold_company_dim", company_dim_df)
+    full_refresh(engine, "gold_event_facts", event_facts_df)
+    full_refresh(engine, "gold_event_company_bridge", event_bridge_df)
+    full_refresh(engine, "gold_sentiment_weekly", weekly_df)
+    full_refresh(engine, "gold_sentiment_monthly", monthly_df)
