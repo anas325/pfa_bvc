@@ -165,7 +165,12 @@ def map_entities(
     keyword_mapped = pd.concat(keyword_rows, ignore_index=True) if keyword_rows else pd.DataFrame(columns=with_mentions.columns)
 
     mapped = pd.concat([with_mentions, keyword_mapped], ignore_index=True)
-    mapped["date"] = mapped["published_at"].dt.normalize()
+    # published_at is tz-aware (TIMESTAMPTZ -> UTC); drop the tz so the derived
+    # date matches the naive stock_prices.date on merge and the Postgres DATE columns.
+    published = mapped["published_at"]
+    if published.dt.tz is not None:
+        published = published.dt.tz_localize(None)
+    mapped["date"] = published.dt.normalize()
     return mapped
 
 
