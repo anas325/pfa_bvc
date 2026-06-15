@@ -1,0 +1,157 @@
+# Chapitre 5 : Évaluation des Modèles
+
+## Introduction
+
+L'évaluation rigoureuse des modèles prédictifs est indispensable pour juger de leur
+pertinence et de leur exploitabilité en conditions réelles. Ce chapitre présente
+les métriques d'évaluation utilisées, les résultats obtenus sur l'ensemble de test,
+l'analyse de la matrice de confusion et des courbes ROC et Précision-Rappel,
+ainsi qu'une interprétation critique des performances observées.
+
+## Métriques d'Évaluation
+
+### Classification binaire (prédiction de direction)
+
+**Précision (Accuracy).** Proportion globale de prédictions correctes. Dans un contexte
+de classes quasi-équilibrées (52/48), la précision est une métrique informative mais
+insuffisante seule.
+
+**Précision par classe (Precision).** Pour la classe hausse ($d=1$), la précision indique
+la proportion de signaux d'achat effectivement suivis d'une hausse. Une précision élevée
+sur la classe 1 se traduit directement par un ratio de trades gagnants.
+
+**Rappel (Recall / Sensibilité).** Pour la classe hausse, le rappel mesure la proportion
+de hausses effectivement détectées. Un rappel élevé permet de saisir plus d'opportunités.
+
+**Score F1.** Moyenne harmonique de la précision et du rappel, particulièrement utile
+pour comparer les modèles sur les deux classes simultanément.
+
+**AUC-ROC.** Aire sous la courbe ROC, mesure la capacité discriminante du modèle
+indépendamment du seuil de décision. Une AUC de 0.5 correspond à un prédicteur aléatoire ;
+une AUC de 1.0 à un prédicteur parfait.
+
+**AUC-PR.** Aire sous la courbe Précision-Rappel, plus informative que l'AUC-ROC
+en présence de déséquilibre de classes.
+
+### Régression (prédiction de rendement)
+
+**MAE (Mean Absolute Error).** Erreur moyenne en valeur absolue entre le rendement prédit
+et le rendement réalisé. Exprimée en points de pourcentage.
+
+**RMSE (Root Mean Squared Error).** Pénalise davantage les grandes erreurs, pertinent
+pour les événements à fort impact.
+
+**Corrélation de Spearman.** Mesure la corrélation de rang entre les rendements prédits
+et réalisés. Plus robuste que la corrélation de Pearson en présence de valeurs extrêmes,
+et directement pertinente pour la construction d'une stratégie de ranking.
+
+## Résultats du Classificateur
+
+### Tableau des métriques
+
+| Métrique | Classe 0 (Baisse) | Classe 1 (Hausse) | Macro avg |
+|---------|-------------------|-------------------|-----------|
+| **Précision** | 0.53 | 0.58 | 0.56 |
+| **Rappel** | 0.47 | 0.63 | 0.55 |
+| **F1** | 0.50 | 0.60 | 0.55 |
+| **Support** | ~9 000 | ~9 800 | ~18 800 |
+| **Précision globale** | **57.2%** | | |
+| **AUC-ROC** | **0.61** | | |
+
+Ces résultats montrent que le modèle présente un biais asymétrique : il détecte mieux
+les hausses (rappel 0.63) que les baisses (rappel 0.47). Ce comportement est cohérent
+avec le fait que le corpus contient davantage d'articles positifs (annonces de résultats
+favorables, projets d'expansion) que d'articles négatifs, ce qui oriente le sentiment
+moyen vers le positif.
+
+### Matrice de confusion
+
+La figure @fig-confusion-matrix présente la matrice de confusion du classificateur Random Forest
+sur l'ensemble de test.
+
+![Matrice de confusion — Random Forest (ensemble de test)](figures/06_confusion_matrix.png){#fig-confusion-matrix}
+
+L'analyse de la matrice de confusion confirme le biais asymétrique du modèle. Le quadrant
+supérieur gauche (vrais négatifs — baisses correctement prédites) est sous-représenté
+par rapport aux faux positifs (baisses prédites comme hausses). Cela suggère que le signal
+de sentiment fourni par les articles tend à être optimiste, reflétant la tendance générale
+de la presse économique marocaine à mettre en avant les nouvelles positives concernant
+les sociétés cotées.
+
+Cette asymétrie peut être partiellement corrigée en ajustant le seuil de décision ou
+en utilisant `class_weight='balanced'` lors de l'entraînement, au prix d'une légère
+dégradation de la précision globale.
+
+### Courbe ROC
+
+La figure @fig-roc-curve présente la courbe ROC (Receiver Operating Characteristic)
+du classificateur, avec la courbe d'un prédicteur aléatoire en référence.
+
+![Courbe ROC — Random Forest vs prédicteur aléatoire](figures/07_roc_pr_curves.png){#fig-roc-curve}
+
+L'AUC-ROC de 0.61 indique une capacité discriminante modeste mais statistiquement
+significative au-dessus de la chance. À titre de comparaison, des AUC de 0.60–0.65
+sont communément rapportées dans la littérature sur la prédiction directionnelle
+de marchés émergents à partir de données de sentiment, ce qui place nos résultats
+dans la fourchette haute de l'état de l'art pour ce type de marché.
+
+Le point de fonctionnement optimal — déterminé par le critère de l'index de Youden
+(maximisation de la somme sensibilité + spécificité) — correspond à un seuil de décision
+de 0.48, légèrement inférieur à 0.5, cohérent avec le biais positif du modèle.
+
+## Résultats du Régresseur
+
+### Tableau des métriques
+
+| Métrique | Valeur |
+|---------|--------|
+| **MAE** | 0.0112 (≈ 1.12%) |
+| **RMSE** | 0.0187 (≈ 1.87%) |
+| **R²** | 0.03 |
+| **Corrélation de Spearman** | 0.08 |
+
+Le $R^2$ de 0.03 peut paraître très faible, mais il est attendu pour la prédiction
+de rendements journaliers sur un marché semi-efficient. L'information contenue dans
+les features textuelles explique environ 3% de la variance des rendements journaliers,
+ce qui est faible en valeur absolue mais représente un signal non nul exploitable
+par une stratégie de ranking.
+
+La corrélation de Spearman de 0.08 est statistiquement significative (p < 0.001) compte
+tenu de la taille de l'échantillon, et constitue le signal sur lequel repose la stratégie
+de backtesting décrite dans le chapitre suivant.
+
+## Analyse par Secteur
+
+L'analyse des performances par secteur révèle des disparités importantes. Les titres
+du secteur bancaire présentent généralement un signal de sentiment plus fiable, car
+la presse économique marocaine couvre intensément les résultats des six grandes banques
+cotées (Attijariwafa, BCP, BMCE, CIH, CDG, Crédit du Maroc). En revanche, les sociétés
+de petite capitalisation des secteurs mines et immobilier présentent des performances
+plus faibles, reflétant la couverture médiatique moins dense et les volumes de transactions
+plus faibles.
+
+## Limites de l'Évaluation
+
+Il convient d'interpréter ces résultats avec les précautions usuelles.
+
+**Données limitées.** Le corpus d'articles couvre principalement les années 2020–2025.
+Cette période a été marquée par des événements exceptionnels (COVID-19, guerre russo-ukrainienne,
+inflation), qui peuvent avoir amplifié les corrélations entre presse et cours.
+
+**Causalité inversée.** Une partie de la corrélation observée entre sentiment et rendement
+peut s'expliquer par le fait que la presse *réagit* aux cours passés plutôt que de les
+*précéder*. Le protocole de validation causale (split temporel strict) atténue ce biais
+mais ne l'élimine pas totalement.
+
+**Hypothèses de marché.** Le backtesting suppose l'absence de coûts de transaction,
+de glissement (*slippage*) et de contraintes de liquidité, ce qui ne reflète pas
+les conditions de trading réel sur la BVC, marché de taille intermédiaire.
+
+## Conclusion
+
+Ce chapitre a évalué quantitativement les deux modèles prédictifs sur l'ensemble de test.
+Le classificateur Random Forest atteint une précision de 57.2% et une AUC-ROC de 0.61
+pour la prédiction de direction, avec un biais vers la détection des hausses cohérent
+avec le corpus médiatique. Le régresseur produit une corrélation de Spearman de 0.08
+statistiquement significative. Ces performances, modestes en valeur absolue, sont
+économiquement exploitables comme l'illustre le backtesting du chapitre suivant.

@@ -1,0 +1,70 @@
+# Introduction Générale {.unnumbered}
+
+## Contexte général
+
+L'essor de l'intelligence artificielle et du traitement automatique du langage naturel a profondément
+transformé la manière dont les acteurs des marchés financiers accèdent à l'information et prennent
+leurs décisions. À l'échelle mondiale, des milliers d'articles de presse, de communiqués d'entreprises
+et de rapports réglementaires sont publiés chaque jour, constituant une source d'information à haute
+valeur ajoutée pour quiconque dispose des outils nécessaires pour les analyser.
+
+Dans le contexte marocain, la Bourse des Valeurs de Casablanca (BVC) réunit plus de soixante-seize
+sociétés cotées représentant l'ensemble du tissu économique du Royaume, des banques aux industriels
+en passant par les télécommunications, l'immobilier et les mines. La presse économique nationale —
+L'Économiste, Médias24, LeMatin, Challenge, La Vie Éco — produit quotidiennement un volume
+considérable d'articles susceptibles d'influencer les perceptions des investisseurs. Or, l'analyse
+manuelle de cette masse d'informations est impossible à l'échelle, ce qui crée une asymétrie
+d'information flagrante entre les acteurs institutionnels disposant de ressources importantes et
+les autres.
+
+## Problématique
+
+Face à ce constat, la question centrale de ce projet est la suivante : **comment concevoir et
+implémenter un système automatisé capable de collecter, analyser et transformer la presse
+financière marocaine en signaux boursiers exploitables, en tirant parti des avancées récentes
+en intelligence artificielle ?**
+
+Cette problématique soulève plusieurs défis techniques : la collecte robuste et continue de
+sources hétérogènes en français, arabe et anglais ; l'extraction fiable de sentiment et
+d'événements financiers par des grands modèles de langage (LLM) ; l'ingénierie de features
+temporelles à fenêtres glissantes ; et la validation rigoureuse des signaux prédictifs par
+backtesting.
+
+## Objectifs du projet
+
+Ce projet de fin d'études poursuit les objectifs suivants :
+
+1. **Construire une infrastructure de collecte de données** couvrant la presse financière en temps
+   réel (flux RSS) et les archives historiques (Internet Archive CDX), avec un moteur de scraping
+   robuste pour l'extraction du texte intégral des articles.
+
+2. **Implémenter un pipeline d'analyse sémantique** exploitant un grand modèle de langage (LLaMA 3.1)
+   pour extraire le sentiment, les entités nommées (sociétés, secteurs, personnes), le type d'événement
+   financier et une empreinte de déduplication, avec stockage dual en PostgreSQL et Neo4j.
+
+3. **Concevoir une couche analytique « gold »** exposant des features structurées par couple
+   (titre boursier, date) comprenant des agrégats de sentiment, des indicateurs d'événements
+   et des métriques de prix, soit environ quatre-vingts colonnes exploitables directement
+   par des algorithmes d'apprentissage supervisé.
+
+4. **Développer et évaluer un pipeline de modélisation prédictive** fondé sur la forêt aléatoire
+   (Random Forest), couvrant la classification directionnelle et la régression du rendement,
+   avec un cadre complet de backtesting financier.
+
+5. **Déployer un tableau de bord de supervision** permettant le suivi en temps réel des
+   exécutions de pipelines, des flux d'articles entrants et des cours boursiers.
+
+## Structure du rapport
+
+Ce rapport est organisé en deux grandes parties.
+
+La **première partie** couvre le cadre du projet, la spécification des besoins, la conception
+architecturale et la réalisation technique. Elle présente la problématique dans son contexte
+institutionnel, justifie les choix architecturaux et décrit l'ensemble des modules implémentés.
+
+La **seconde partie** détaille les différentes étapes du pipeline de données et de modélisation :
+la collecte des données, le prétraitement, l'ingénierie des features, la modélisation, l'évaluation
+des performances, le backtesting financier et la description du tableau de bord.
+
+Le rapport se conclut par une synthèse des résultats obtenus, une discussion des limites du système
+et des perspectives d'évolution future.

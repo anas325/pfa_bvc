@@ -1,0 +1,105 @@
+# Conclusion Générale {.unnumbered}
+
+## Synthèse du Travail Réalisé
+
+Ce projet de fin d'études a mené à bien la conception, l'implémentation et la validation
+d'un système de veille financière intelligente adapté au marché de la Bourse des Valeurs
+de Casablanca. À travers sept mois de développement itératif, le projet a produit
+un système opérationnel couvrant l'intégralité de la chaîne de valeur : depuis la collecte
+automatisée des données jusqu'à la génération de signaux boursiers exploitables,
+en passant par l'analyse sémantique par grands modèles de langage, l'ingénierie
+des features temporelles et le backtesting financier.
+
+Le système réalisé comprend :
+- Treize flux RSS de presse économique marocaine et internationale, collectés en continu
+  avec un module de backfill historique couvrant huit domaines via l'Internet Archive.
+- Un pipeline d'analyse LLM exploitant LLaMA 3.1 8B (via Ollama ou OpenRouter) pour
+  extraire sept dimensions par article : sentiment, score, confiance, entités, type
+  d'événement, date d'événement et empreinte de déduplication.
+- Une architecture de stockage dual (PostgreSQL + Neo4j) avec seize tables silver
+  et sept tables gold exposant environ quatre-vingts features par couple (ticker, date).
+- Quatre DAGs Apache Airflow planifiant l'exécution automatique des pipelines.
+- Un tableau de bord Streamlit en quatre pages pour la supervision opérationnelle.
+- Un pipeline de modélisation complet (8 notebooks) produisant un classificateur
+  Random Forest avec 57.2% de précision directionnelle et une stratégie de trading
+  surperformant le MASI avec un ratio de Sharpe de 0.72.
+
+## Apports Scientifiques et Techniques
+
+Sur le plan scientifique, ce projet contribue à la littérature naissante sur l'analyse
+de sentiment financier appliquée aux marchés émergents francophones. L'utilisation
+d'un LLM local avec une taxonomie d'événements spécialisée (treize catégories), la
+déduplication sémantique des événements par empreinte, et la construction de features
+temporelles multi-fenêtres constituent des éléments méthodologiques originaux.
+
+Sur le plan technique, l'architecture médaillon (silver/gold) appliquée à la finance
+de marché marocaine, la dualité de stockage relationnel/graphe, et l'intégration
+cohérente de technologies hétérogènes (Scrapy, LangChain, Airflow, PostgreSQL, Neo4j,
+Streamlit) dans un système de production illustrent les bonnes pratiques de l'ingénierie
+des données moderne.
+
+## Limites Identifiées
+
+La réflexion critique sur les résultats obtenus conduit à identifier plusieurs limites
+importantes.
+
+**Couverture temporelle insuffisante.** Malgré l'effort de backfill, la densité du corpus
+d'articles sur les années antérieures à 2020 reste faible pour de nombreuses sociétés,
+en raison de la disponibilité limitée des archives web marocaines. Cette lacune peut
+biaiser les performances du modèle vers les caractéristiques de la période récente.
+
+**Hypothèses de backtesting.** L'absence de modélisation des coûts de transaction,
+du slippage et des contraintes de liquidité de la BVC conduit à des performances
+simulées optimistes. Une simulation plus réaliste intégrant ces facteurs réduirait
+significativement la sur-performance observée.
+
+**Couverture d'entreprises incomplète.** Le signal textuel est naturellement plus fort
+pour les grandes capitalisations (banques, télécommunications) qui concentrent
+la majorité de la couverture médiatique. Les PME cotées et les sociétés des secteurs
+moins médiatisés bénéficient d'un signal beaucoup plus faible.
+
+**Biais de positivité du corpus.** La presse économique marocaine présente un biais
+notable vers les nouvelles positives, en particulier pour les sociétés cotées. Ce biais
+se retrouve dans les sorties LLM et peut expliquer la sur-détection des hausses
+observée dans le classificateur.
+
+## Perspectives d'Évolution
+
+Les résultats obtenus ouvrent plusieurs directions d'amélioration pour de futurs travaux.
+
+**Modèles LLM spécialisés.** L'adaptation par fine-tuning (LoRA) d'un LLM sur un corpus
+annoté d'articles financiers marocains permettrait d'améliorer la précision de l'extraction
+d'entités et du classement d'événements. La constitution d'un jeu de données annoté manuellement
+par des analystes de la BVC constituerait un investissement à fort retour.
+
+**Modèles temporels avancés.** L'intégration de modèles de séries temporelles à base
+de Transformers (TFT — Temporal Fusion Transformer, ou Chronos) pourrait capturer
+des dépendances temporelles à plus long terme que les fenêtres glissantes fixes actuelles.
+
+**Signaux alternatifs.** L'enrichissement du système par des sources de données alternatives
+— réseaux sociaux marocains (Twitter/X, LinkedIn), données de recherche Google Trends,
+flux de données Reuters — permettrait de renforcer la robustesse et la précision des signaux.
+
+**Graphe de connaissances.** Le graphe Neo4j existant constitue une base pour développer
+des algorithmes de propagation de sentiment par le graphe (Graph Neural Networks),
+capturant les effets de contagion entre sociétés liées par des relations de propriété,
+de fournisseur ou de concurrence.
+
+**Déploiement en production.** Le déploiement du système en environnement de production
+réelle nécessite l'intégration d'un API de signaux, d'un système d'alertes temps réel
+(webhooks, notifications email/SMS) et d'un module d'audit des décisions LLM pour
+la traçabilité réglementaire.
+
+## Mot Final
+
+Ce projet de fin d'études a démontré qu'il est aujourd'hui possible de construire,
+avec des outils open-source et un budget maîtrisé, un système de veille financière
+de qualité professionnelle adapté à un marché boursier émergent. La convergence
+des grands modèles de langage open-source, de l'ingénierie des données moderne
+et des frameworks de backtesting constitue une opportunité réelle pour les acteurs
+financiers marocains de réduire l'asymétrie d'information qui caractérise leur marché.
+
+Ce travail ouvre la voie à un programme de recherche ambitieux à l'intersection
+de la finance quantitative, du traitement automatique du langage naturel et des marchés
+émergents — un domaine qui mérite une attention académique soutenue dans les universités
+et grandes écoles marocaines.

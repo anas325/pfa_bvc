@@ -1,0 +1,223 @@
+# Chapitre 4 : Réalisation
+
+## Introduction
+
+Ce chapitre décrit l'environnement de développement et l'implémentation concrète du système.
+Après avoir présenté les environnements matériels et logiciels, il décrit en détail chacun
+des modules implémentés, leur rôle, leur fonctionnement interne et leurs dépendances.
+Ce chapitre constitue le pont entre la conception architecturale du chapitre précédent
+et la description du pipeline de données de la seconde partie.
+
+## Environnement Matériel
+
+Le développement et l'expérimentation ont été conduits sur la configuration matérielle
+suivante :
+
+| Composant | Spécification |
+|-----------|--------------|
+| **Processeur** | AMD Ryzen ou Intel Core (génération récente) |
+| **Mémoire vive** | 16 Go DDR4 minimum (32 Go recommandés pour Ollama + Docker) |
+| **Stockage** | SSD NVMe 512 Go (pour les données PostgreSQL et archives CDX) |
+| **Système d'exploitation** | Windows 11 Home (avec WSL2 pour Airflow) |
+| **GPU** | Optionnel — accélère l'inférence LLaMA 3.1 via Ollama (réduction de ~4× de la latence) |
+| **Connexion réseau** | Internet haut débit (pour les appels à OpenRouter et Internet Archive) |
+
+L'architecture Docker Compose permet de déployer l'intégralité de la pile infrastructure
+(PostgreSQL, Neo4j, MinIO, Airflow, Dashboard) sur cette même machine, ce qui rend le
+système autonome et facilement reproductible.
+
+## Environnement Logiciel
+
+### Langages et outils principaux
+
+| Outil / Bibliothèque | Version | Rôle |
+|---------------------|---------|------|
+| **Python** | 3.12 | Langage principal de tous les pipelines |
+| **uv** | ≥ 0.4 | Gestionnaire de paquets et d'environnements virtuels ultra-rapide |
+| **Docker / Docker Compose** | ≥ 25.0 | Conteneurisation de l'infrastructure |
+| **Apache Airflow** | 2.x | Orchestration des DAGs |
+| **Jupyter Lab** | ≥ 4.0 | Exploration et modélisation en notebooks |
+| **VS Code** | ≥ 1.90 | IDE principal avec extensions Python |
+| **Git** | ≥ 2.40 | Versionnement du code |
+
+### Bases de données
+
+| Service | Version | Rôle |
+|---------|---------|------|
+| **PostgreSQL** | 16 | Stockage relationnel silver et gold |
+| **Neo4j** | Community Edition | Graphe des entités et relations |
+| **MinIO** | RELEASE.2024 | Stockage objet S3-compatible (documents AMMC) |
+| **SQLite** | 3.x (intégré) | Journalisation locale des pipelines |
+
+### Bibliothèques Python clés
+
+| Bibliothèque | Rôle |
+|-------------|------|
+| **LangChain / langchain-openai** | Orchestration LLM, appels structurés |
+| **langchain-ollama** | Interface vers Ollama local |
+| **Tavily Python** | Recherche web pour le pipeline agent |
+| **feedparser** | Parsing des flux Atom/RSS |
+| **Scrapy ≥ 2.14** | Framework de scraping web |
+| **Scrapy-Playwright** | Rendu JavaScript pour les pages dynamiques |
+| **BeautifulSoup4 + html5lib** | Extraction de texte HTML |
+| **pandas ≥ 3.0** | Manipulation de DataFrames |
+| **pyarrow ≥ 24** | Lecture/écriture Parquet |
+| **scikit-learn ≥ 1.8** | Modèles ML (Random Forest) |
+| **psycopg2-binary** | Driver PostgreSQL |
+| **neo4j ≥ 6.1** | Driver Neo4j Python |
+| **Pydantic v2** | Validation des modèles de données structurés |
+| **PyYAML** | Lecture des fichiers de configuration |
+| **Streamlit** | Tableau de bord web |
+| **matplotlib ≥ 3.10** | Visualisations statiques |
+| **yfinance ≥ 1.3** | Données de commodités via Yahoo Finance |
+| **bvcscrap ≥ 0.2** | Scraping BVC (bibliothèque spécialisée) |
+
+## Description des Modules Implémentés
+
+### Module `rss/` — Pipeline de veille RSS
+
+Le module `rss/` constitue le cœur analytique du système. Il est structuré en cinq fichiers
+aux responsabilités clairement séparées.
+
+**`rss/models.py`** définit les structures de données Pydantic utilisées dans l'ensemble
+du pipeline. La classe `ArticleSentiment` est particulièrement importante : elle encapsule
+tous les champs extraits par le LLM et implémente des validateurs qui normalisent les
+variantes linguistiques du sentiment (par exemple, `positif` → `positive`, `négatif` →
+`negative`). Elle calcule également l'empreinte de déduplication des événements via
+un hachage déterministe sur `(event_type, mentioned_tickers, iso_week)`.
+
+**`rss/rss_fetcher.py`** gère l'acquisition des articles depuis les flux RSS. La fonction
+`fetch_all_feeds()` itère sur les flux activés dans la configuration, invoque `feedparser`
+pour chaque flux et filtre les articles selon la fenêtre temporelle configurée (`lookback_days`,
+par défaut 7 jours). Pour les sources disposant d'un scraper enregistré dans le dictionnaire
+`SCRAPERS`, elle effectue une requête HTTP supplémentaire pour extraire le texte intégral
+via un sélecteur CSS spécifique à chaque domaine. La correspondance avec les entités du marché
+est effectuée par la fonction `match_article_entities()`, qui utilise la tokenisation et
+la correspondance de préfixes pour identifier les tickers et secteurs mentionnés.
+
+**`rss/analyzer.py`** implémente la classe `LLMArticleAnalyzer` qui orchestre l'appel au
+LLM. Le prompt est construit dynamiquement en intégrant la liste complète des sociétés cotées
+(ticker — nom) et des secteurs BVC, garantissant que le modèle peut effectuer une extraction
+précise des entités. Le prompt inclut également la taxonomie complète des treize types
+d'événements financiers. La réponse est parsée via `langchain-openai` avec un schéma Pydantic
+comme paramètre `response_format`, ce qui force le LLM à produire un JSON structuré conforme.
+En cas d'échec, un mécanisme de retry avec backoff exponentiel (5s, 10s, 20s) est appliqué.
+
+**`rss/neo4j_loader.py`** gère l'ensemble des interactions avec Neo4j. Il implémente
+`ensure_constraints()` qui crée automatiquement les contraintes d'unicité au démarrage,
+les fonctions `seed_*()` pour initialiser les nœuds de référence (entreprises, secteurs),
+et `store_sentiment_batch()` pour stocker les résultats d'analyse avec toutes leurs relations.
+
+**`rss/pipeline.py`** est le point d'entrée du pipeline RSS. Il coordonne les deux phases
+(collecte et analyse) avec une gestion rigoureuse de la reprise : il récupère en début
+d'exécution la liste des URLs déjà présentes en base pour ne pas les retraiter. Il utilise
+`PipelineLogger` pour journaliser chaque étape et les métriques clés.
+
+### Module `gold/` — Couche analytique
+
+Le module `gold/` transforme les données silver en tables analytiques optimisées pour
+la modélisation prédictive.
+
+**`gold/extractors.py`** fournit des fonctions de chargement des données silver depuis
+PostgreSQL via des requêtes SQL avec jointures. La fonction `load_articles()` effectue
+un LEFT JOIN entre `articles` et `sentiment_scores`, retournant un DataFrame qui intègre
+à la fois les métadonnées de l'article et les résultats d'analyse LLM.
+
+**`gold/features.py`** est le module le plus complexe du système. Il implémente
+successivement l'enrichissement des articles par détection règle-métier d'événements
+(M&A, résultats, management, contentieux), le calcul des agrégats de sentiment
+à fenêtres glissantes (3 et 7 jours) par couple (ticker, date), la construction
+des indicateurs d'événements binaires, et l'encodage one-hot des treize types
+d'événements LLM avec leurs agrégats temporels. Il produit également les signaux
+journaliers en joignant les features textuelles aux données de prix OHLCV.
+
+**`gold/pipeline.py`** orchestre l'exécution séquentielle des transformations et écrit
+les résultats dans le schéma `gold` de PostgreSQL via une stratégie de rechargement
+complet (TRUNCATE + INSERT) pour garantir la cohérence des données.
+
+### Module `scrapers/` — Web scraping
+
+Le module `scrapers/` contient trois spiders Scrapy pour la collecte de données structurées.
+
+**`bkam_spider.py`** scrape le site de Bank Al-Maghrib pour extraire les taux de change
+quotidiens des billets de banque. Il accepte des paramètres de date en ligne de commande
+(`-a start_d=DD-MM-YYYY -a end=DD-MM-YYYY`) et itère sur chaque jour de la plage.
+L'extraction repose sur la lecture d'un tableau HTML via `pandas.read_html()`.
+
+**`lematin_spider.py`** collecte les cours boursiers publiés quotidiennement par LeMatin.
+Il est planifié par le DAG `stock_prices_dag` à 17h en jours ouvrés, immédiatement après
+la clôture de la séance boursière.
+
+**`pipelines.py`** (pipeline Scrapy, pas à confondre avec le module RSS) implémente
+la classe `MinioFilesPipeline` qui télécharge les fichiers associés aux items scrapés
+(notamment les rapports AMMC) et les store dans MinIO avec des métadonnées enrichies.
+
+### Module `agents/` — Pipeline de recherche structurée
+
+**`agents/agent.py`** implémente un agent LangChain qui enrichit la liste des sociétés cotées
+avec des informations structurées. Pour chaque société, il conduit une recherche Tavily sur
+le web, puis soumet les résultats bruts à un LLM avec extraction structurée vers un modèle
+Pydantic définissant huit champs : description, secteur, PDG, année de fondation, siège social,
+chiffre d'affaires, effectif et cotation. Les résultats sont sauvegardés incrémentalement
+dans `companies_research.json`, ce qui permet la reprise en cas d'interruption.
+
+### Module `monitoring/` — Journalisation
+
+**`monitoring/logger.py`** implémente `PipelineLogger`, un gestionnaire de contexte Python
+qui journalise les exécutions de pipeline dans une base SQLite locale. Il crée automatiquement
+les tables `pipeline_runs` et `pipeline_events` si elles n'existent pas. L'intégration
+avec les pipelines se fait via le pattern `with PipelineLogger(...) as logger:`, qui garantit
+que le statut final est toujours enregistré, même en cas d'exception.
+
+### Module `backfill/` — Archives historiques
+
+**`cdx_harvester/`** est un module CLI autonome (avec son propre `pyproject.toml`) qui
+indexe les archives des huit domaines de presse marocaine via l'API CDX d'Internet Archive.
+La commande `index {domain}` interroge l'endpoint CDX, filtre les URLs valides selon le pattern
+du domaine, et sauvegarde un fichier `index.parquet` avec les URLs, dates et checksums.
+La commande `fetch {domain}` télécharge les HTML correspondants, les compresse en `.html.gz`
+et les sauvegarde localement.
+
+**`ingest.py`** charge ces archives dans PostgreSQL en décompressant les HTML, extrayant le
+texte via Selectolax et les soumettant au même `LLMArticleAnalyzer` que le pipeline RSS.
+
+### Tableau de bord — `Dashboard/`
+
+**`Dashboard/app.py`** est le point d'entrée de l'application Streamlit. Il définit
+la navigation multi-pages et le thème visuel de l'interface.
+
+**`pages/1_Overview.py`** affiche les KPI globaux du système : nombre total d'articles
+analysés, répartition des sentiments, entreprises les plus mentionnées et derniers articles.
+
+**`pages/2_Runs.py`** expose l'historique des exécutions des pipelines depuis la table
+SQLite de monitoring, avec filtrage par pipeline et visualisation des métriques.
+
+**`pages/3_Live.py`** affiche en quasi-temps réel les derniers articles analysés avec
+leur sentiment, leurs entités mentionnées et leur raisonnement LLM.
+
+**`pages/4_Stock_Prices.py`** propose une interface de consultation des cours boursiers
+avec graphiques OHLCV interactifs et superposition des signaux de sentiment.
+
+### Orchestration — `Services/airflow/dags/`
+
+Quatre DAGs Apache Airflow orchestrent l'ensemble des pipelines :
+
+**`rss_pipeline_dag.py`** s'exécute toutes les heures et lance le pipeline RSS complet.
+**`stock_prices_dag.py`** s'exécute en semaine à 17h pour collecter les cours du jour.
+**`bkam_dag.py`** s'exécute en semaine à 10h pour collecter les taux BKAM.
+**`gold_layer_dag.py`** s'exécute chaque nuit à 2h pour rafraîchir la couche gold.
+
+Chaque DAG utilise `BashOperator` pour exécuter les commandes Python via `uv run`,
+garantissant l'utilisation des dépendances figées dans l'environnement virtuel géré par `uv`.
+
+## Conclusion
+
+Ce chapitre a décrit en détail l'environnement de développement et chacun des modules
+implémentés. Le système compte plus de quarante fichiers Python représentant environ
+2 500 lignes de code fonctionnel, organisés en modules aux responsabilités clairement
+délimitées. La séparation entre collecte, analyse, stockage et présentation confère
+au système la maintenabilité et l'extensibilité définies comme besoins non fonctionnels.
+
+La seconde partie de ce rapport entre maintenant dans le détail des étapes du pipeline
+de données et de modélisation, depuis la collecte des données jusqu'au backtesting
+des stratégies de trading.

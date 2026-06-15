@@ -1,0 +1,112 @@
+---
+title: |
+  Système de Veille Financière Intelligente pour la Bourse des Valeurs de Casablanca :
+  Collecte Automatisée, Analyse de Sentiment par LLM et Prédiction des Signaux Boursiers
+subtitle: "Rapport de Projet de Fin d'Études — Cycle Ingénieur"
+author:
+  - name: "Anas WARDI"
+    affiliation: "École Nationale des Sciences Appliquées"
+date: "Année universitaire 2025–2026"
+lang: fr
+format:
+  docx:
+    toc: true
+    toc-title: "Table des matières"
+    toc-depth: 3
+    number-sections: true
+    number-depth: 3
+    fig-cap-location: bottom
+    fig-align: center
+    highlight-style: github
+    execute:
+      echo: false
+      warning: false
+bibliography: bibliographie.bib
+
+---
+
+{{< include frontmatter/dedicaces.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include frontmatter/remerciements.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include frontmatter/resume.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include frontmatter/abstract.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include frontmatter/introduction_generale.qmd >}}
+
+{{< pagebreak >}}
+
+# Partie I — Cadre du Projet, Spécification et Conception {.unnumbered}
+
+{{< pagebreak >}}
+
+{{< include partie1/chapitre1_cadre_projet.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie1/chapitre2_specification_besoins.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie1/chapitre3_conception.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie1/chapitre4_realisation.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie1/conclusion_partie.qmd >}}
+
+{{< pagebreak >}}
+
+# Partie II — Ingénierie des Données, Modélisation et Évaluation {.unnumbered}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre1_collecte_donnees.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre2_pretraitement.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre3_feature_engineering.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre4_modelisation.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre5_evaluation.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre6_backtesting.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/chapitre7_dashboard.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include partie2/conclusion_partie.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include conclusion_generale.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include bibliographie.qmd >}}

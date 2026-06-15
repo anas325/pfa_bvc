@@ -1,0 +1,24 @@
+# Dédicaces {.unnumbered}
+
+::: {style="text-align: center; font-style: italic; margin-top: 6cm; margin-bottom: 6cm;"}
+
+*À mes chers parents,*
+
+*dont le soutien indéfectible et les sacrifices consentis tout au long de mon parcours*
+*ont rendu possible l'accomplissement de ce travail.*
+
+*À mes frères et sœurs,*
+
+*pour leur encouragement constant et leur présence bienveillante.*
+
+*À mes professeurs,*
+
+*qui ont guidé mes pas sur le chemin du savoir avec patience et dévouement.*
+
+*À mes amis et camarades de promotion,*
+
+*avec qui j'ai partagé les épreuves et les joies de ces années d'études.*
+
+*Je dédie ce modeste travail.*
+
+:::

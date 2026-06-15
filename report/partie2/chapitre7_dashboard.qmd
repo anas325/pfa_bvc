@@ -1,0 +1,159 @@
+# Chapitre 7 : Tableau de Bord de Supervision
+
+## Introduction
+
+Le tableau de bord de supervision constitue la couche de présentation du système.
+Il a pour vocation de rendre accessibles à des utilisateurs non-techniques les informations
+produites par les pipelines de données et les modèles d'analyse : flux d'articles en
+temps réel, signaux de sentiment par titre boursier, historique des exécutions des pipelines
+et visualisation des cours boursiers. Ce chapitre décrit l'architecture du tableau de bord,
+le choix technologique retenu et le contenu de chacune des quatre pages implémentées.
+
+## Architecture Technique
+
+### Choix de Streamlit
+
+Streamlit a été retenu comme framework de développement du tableau de bord pour plusieurs
+raisons. Sa philosophie *Python-first* permet de développer une interface web interactive
+sans compétences en HTML/CSS/JavaScript, ce qui accélère considérablement le cycle
+de développement. Sa capacité à s'intégrer nativement avec pandas et matplotlib rend
+triviale la transformation d'un notebook d'exploration en interface de production.
+Enfin, sa compatibilité avec Docker permet un déploiement cohérent avec le reste
+de l'infrastructure.
+
+Le tableau de bord est exposé sur le port 8501 du serveur Docker et s'intègre dans
+le réseau bridge `bvc_net`, lui permettant d'accéder directement à PostgreSQL.
+Son image Docker est définie dans `Dashboard/Dockerfile` et intégrée dans le
+`docker-compose.yml` global.
+
+### Structure du code
+
+Le tableau de bord est organisé selon le modèle multi-pages de Streamlit :
+
+```
+Dashboard/
+  app.py               ← Point d'entrée, navigation, thème
+  db.py                ← Fonctions de requêtes PostgreSQL
+  pages/
+    1_Overview.py      ← Page 1 : Vue d'ensemble
+    2_Runs.py          ← Page 2 : Suivi des exécutions
+    3_Live.py          ← Page 3 : Flux en direct
+    4_Stock_Prices.py  ← Page 4 : Cours boursiers
+```
+
+Le module `db.py` centralise les fonctions de requêtes SQL paramétrées, assurant
+la séparation entre la logique de présentation et l'accès aux données. Les requêtes
+utilisent `psycopg2` avec des paramètres préparés pour prévenir les injections SQL.
+
+## Page 1 — Vue d'Ensemble
+
+La page *Overview* offre une synthèse des indicateurs clés de performance du système
+sur une période configurable (24h, 7 jours, 30 jours). Elle est conçue pour fournir
+en un coup d'œil l'état de santé du système et les tendances récentes du sentiment
+de la presse financière marocaine.
+
+Les éléments présentés sur cette page sont :
+
+**KPI globaux (bandeau supérieur).** Quatre métriques affichées en large : nombre total
+d'articles analysés sur la période, répartition globale du sentiment (positif/négatif/neutre)
+sous forme de jauge, nombre de sociétés mentionnées et nombre d'événements distincts identifiés.
+
+**Répartition du sentiment par source.** Un graphique en barres groupées montre la
+distribution des sentiments positif/négatif/neutre pour chaque source d'actualités,
+permettant d'identifier les publications les plus optimistes ou les plus critiques.
+
+**Sociétés les plus mentionnées.** Un graphique horizontal en barres classe les dix
+sociétés les plus citées dans la presse sur la période, avec une distinction par
+sentiment (positif vs négatif).
+
+**Carte thermique sectorielle.** Une heatmap présente le sentiment moyen par secteur
+BVC sur les sept derniers jours, offrant une vue macro du sentiment sectoriel.
+
+**Derniers articles analysés.** Un tableau des dix articles les plus récents, avec
+le titre, la source, le sentiment, le score de confiance et les entités mentionnées.
+
+## Page 2 — Suivi des Exécutions
+
+La page *Runs* expose l'historique des exécutions des quatre pipelines Airflow,
+en lisant directement la base SQLite de monitoring gérée par `monitoring/logger.py`.
+
+Les fonctionnalités offertes sont :
+
+**Filtre par pipeline.** Un menu déroulant permet de sélectionner le pipeline à inspecter
+(`rss_pipeline`, `gold_layer`, `stock_prices`, `bkam`).
+
+**Timeline des exécutions.** Un graphique temporel présente les dernières cent exécutions,
+colorées selon leur statut (succès en vert, échec en rouge, en cours en bleu).
+
+**Métriques d'une exécution.** En cliquant sur une exécution, l'utilisateur accède
+au détail : durée totale, nombre d'articles traités, nombre d'échecs, log des événements
+structurés émis par `PipelineLogger.event()`.
+
+**Graphique de tendance.** Un graphique de la tendance du nombre d'articles traités
+par exécution sur les trente derniers jours, permettant de détecter une érosion
+progressive du volume de collecte.
+
+## Page 3 — Flux en Direct
+
+La page *Live* présente un flux quasi-temps réel des articles les plus récemment analysés,
+avec leurs métadonnées complètes extraites par le LLM. Elle est actualisée à intervalle
+configurable (toutes les 60 secondes par défaut via Streamlit auto-rerun).
+
+Chaque article est présenté dans une carte expansible comprenant :
+
+- Le titre, la source et la date de publication.
+- Le badge de sentiment coloré (vert = positif, rouge = négatif, gris = neutre) avec
+  le score numérique.
+- La liste des tickers mentionnés, chacun lié à la page cours boursiers.
+- Le type d'événement identifié par le LLM.
+- Le raisonnement généré par le LLM, offrant une explication en langage naturel du sentiment.
+- Les personnalités citées (nom, rôle).
+
+Cette page est particulièrement utile pour les analystes souhaitant valider manuellement
+la qualité des extractions LLM et détecter d'éventuels articles mal classifiés.
+
+## Page 4 — Cours Boursiers
+
+La page *Stock Prices* propose une interface de consultation des cours boursiers
+avec visualisation graphique interactive et superposition des signaux de sentiment.
+
+**Sélection du titre.** Un champ de recherche autocomplété permet de sélectionner
+un titre parmi les soixante-seize sociétés cotées.
+
+**Graphique OHLCV.** Un graphique en chandeliers japonais (candlestick) représente
+les cours d'ouverture, haut, bas et clôture sur la période sélectionnée (1 mois,
+3 mois, 1 an, tout l'historique).
+
+**Superposition du sentiment.** Une série temporelle du score de sentiment moyen
+(lissé sur 7 jours) est superposée au graphique de cours, permettant une visualisation
+directe de la corrélation entre tonalité de la presse et évolution du cours.
+
+**Marqueurs d'événements.** Les événements financiers significatifs identifiés par
+le LLM (M&A, résultats, changements de direction) sont marqués sur l'axe du temps
+par des icônes colorées selon leur type.
+
+**Tableau des articles.** Sous le graphique, un tableau présente les articles récents
+mentionnant le titre sélectionné, avec leur sentiment et leurs métadonnées.
+
+## Déploiement et Accès
+
+Le tableau de bord est déployé via Docker Compose et accessible à l'adresse
+`http://localhost:8501` depuis la machine hôte. Le fichier `Dashboard/Dockerfile`
+définit une image légère basée sur `python:3.12-slim`, avec installation des
+dépendances depuis `Dashboard/requirements.txt`.
+
+En environnement de production, le tableau de bord peut être exposé via un proxy
+inverse (Nginx, Caddy) avec authentification HTTP de base, conformément
+aux bonnes pratiques de sécurité pour les interfaces exposant des données
+financières potentiellement sensibles.
+
+## Conclusion
+
+Ce chapitre a présenté l'architecture et le contenu du tableau de bord Streamlit,
+qui constitue la face visible du système pour les utilisateurs finaux. Ses quatre pages
+couvrent les besoins d'un analyste financier : vue d'ensemble du sentiment de marché,
+supervision des pipelines, flux en direct des analyses LLM et consultation des cours
+boursiers enrichis par des signaux de sentiment. La simplicité de développement offerte
+par Streamlit a permis de livrer une interface complète et fonctionnelle dans des délais
+courts, tout en maintenant une séparation claire entre logique de présentation et
+accès aux données.

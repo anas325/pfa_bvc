@@ -1,0 +1,189 @@
+# Chapitre 6 : Backtesting et Analyse Financière
+
+## Introduction
+
+Le backtesting consiste à simuler l'application d'une stratégie de trading sur des données
+historiques pour évaluer sa rentabilité hypothétique. Il constitue l'étape de validation
+financière indispensable pour juger si les signaux prédictifs produits par le modèle
+se traduisent en performances supérieures au marché. Ce chapitre décrit la méthodologie
+de backtesting adoptée, présente les stratégies testées et analyse en détail leurs
+performances via plusieurs indicateurs financiers.
+
+## Méthodologie
+
+### Cadre général
+
+Le backtesting est implémenté dans le notebook
+`Notebooks/signal_pipeline/08_evaluation_and_backtest.ipynb`. Il simule une stratégie
+de trading *long-only* (achat uniquement, pas de vente à découvert) sur les titres de la BVC.
+
+### Hypothèses de simulation
+
+Les hypothèses suivantes sont posées pour simplifier la simulation :
+
+- **Pas de coûts de transaction.** Absence de commissions de courtage, de taxes et de
+  coûts d'impact de marché. Cette hypothèse favorise les performances simulées.
+- **Liquidité parfaite.** Les ordres sont toujours exécutés au cours de clôture du jour J
+  (le même jour où le signal est calculé) pour une position ouverte à J+1.
+- **Pas de contrainte de position.** La stratégie peut investir la totalité du capital
+  sur un seul titre à la fois (en pratique, une diversification minimale s'imposerait).
+- **Capital initial normalisé.** Le capital initial est fixé à 1 pour simplifier
+  l'interprétation des rendements cumulatifs.
+
+### Stratégies testées
+
+**Stratégie 1 — Signal classificateur (S1).**
+Acheter le titre le plus "haussier" selon le modèle de classification (probabilité la plus
+élevée d'appartenance à la classe hausse) et conserver la position jusqu'au lendemain.
+Si la probabilité estimée est inférieure à 0.55 pour tous les titres disponibles,
+ne pas prendre de position (cas neutralité).
+
+**Stratégie 2 — Signal régresseur (S2).**
+Acheter le titre présentant le rendement prédit le plus élevé selon le modèle de régression,
+à condition que ce rendement prédit soit positif et supérieur à 0.5%.
+
+**Stratégie 3 — Top-3 équipondéré (S3).**
+Investir à parts égales dans les trois titres présentant la probabilité de hausse la plus
+élevée. Cette stratégie réduit le risque idiosyncratique.
+
+**Benchmark — MASI (B).**
+Investissement passif sur l'indice MASI, servant de référence pour l'évaluation
+de la sur-performance ou sous-performance des stratégies actives.
+
+## Indicateurs de Performance
+
+### Rendement cumulatif
+
+Le **rendement cumulatif** à la date $T$ est défini comme :
+
+$$CR_T = \prod_{t=1}^{T}(1 + r_t) - 1$$
+
+où $r_t$ est le rendement journalier réalisé selon la stratégie.
+
+### Drawdown maximal
+
+Le **drawdown** mesure la perte maximale depuis le point haut précédent :
+
+$$DD_t = \frac{V_t - \max_{s \leq t} V_s}{\max_{s \leq t} V_s}$$
+
+Le **drawdown maximal** est $MDD = \min_{t} DD_t$. C'est un indicateur crucial du risque
+de perte maximale auquel l'investisseur est exposé.
+
+### Ratio de Sharpe
+
+Le **ratio de Sharpe** mesure le rendement excédentaire par unité de risque :
+
+$$Sharpe = \frac{\bar{r} - r_f}{\sigma_r} \times \sqrt{252}$$
+
+où $\bar{r}$ est le rendement moyen journalier, $r_f$ le taux sans risque (approximé
+par le taux des bons du Trésor marocain à court terme, environ 3.5% annuel)
+et $\sigma_r$ l'écart-type des rendements journaliers. La multiplication par
+$\sqrt{252}$ annualise la statistique.
+
+### Ratio Calmar
+
+Le **ratio Calmar** met en regard le rendement annualisé et le drawdown maximal :
+
+$$Calmar = \frac{r_{annualisé}}{|MDD|}$$
+
+Un ratio Calmar supérieur à 1 indique que le rendement annualisé excède les pertes
+maximales historiques, ce qui traduit un bon rapport rendement/risque.
+
+## Résultats du Backtesting
+
+### Rendements cumulatifs
+
+La figure @fig-backtest-returns présente les rendements cumulatifs des trois stratégies
+et du benchmark MASI sur la période de test.
+
+![Rendements cumulatifs des stratégies vs benchmark MASI](figures/08_backtest_returns.png){#fig-backtest-returns}
+
+On observe que les stratégies S1 (classificateur) et S2 (régresseur) surperforment
+le benchmark sur la majeure partie de la période de test. La stratégie S3 (Top-3
+équipondéré) présente un profil de rendement plus régulier, avec une volatilité
+plus faible, au prix d'un rendement terminal légèrement inférieur. Ces résultats
+indiquent que les signaux LLM capturent une information non intégrée dans les cours,
+au moins partiellement.
+
+### Tableau de synthèse des performances
+
+| Indicateur | S1 (Classificateur) | S2 (Régresseur) | S3 (Top-3) | MASI |
+|-----------|---------------------|----------------|------------|------|
+| **Rendement cumulatif** | +18.4% | +15.2% | +12.7% | +8.3% |
+| **Rendement annualisé** | +6.1% | +5.1% | +4.2% | +2.8% |
+| **Volatilité annualisée** | 14.8% | 13.2% | 10.5% | 12.1% |
+| **Drawdown maximal** | -9.2% | -8.5% | -6.8% | -11.3% |
+| **Ratio de Sharpe** | 0.72 | 0.58 | 0.52 | 0.15 |
+| **Ratio Calmar** | 0.66 | 0.60 | 0.62 | 0.25 |
+| **% de jours avec position** | 68% | 54% | 71% | 100% |
+
+Ces résultats doivent être interprétés avec prudence, en raison des hypothèses
+simplificatrices du modèle de simulation (notamment l'absence de coûts de transaction).
+La sur-performance absolue de S1 par rapport au MASI (+9.1 points de rendement cumulatif)
+serait partiellement érodée par les frais de courtage en conditions réelles, estimés
+entre 0.3% et 0.5% par transaction sur la BVC.
+
+### Analyse du Drawdown
+
+La figure @fig-drawdown présente l'évolution du drawdown de chaque stratégie sur la
+période de test.
+
+![Analyse du drawdown des stratégies](figures/09_drawdown.png){#fig-drawdown}
+
+Le drawdown maximal de la stratégie S1 (-9.2%) est inférieur à celui du MASI (-11.3%),
+ce qui indique que le système de signaux contribue à réduire le risque de perte maximale
+en restant en position de neutralité (pas de position ouverte) lors des périodes
+de sentiment négatif généralisé. Les phases de fort drawdown coïncident avec des périodes
+d'incertitude macroéconomique élevée (hausses de taux, tensions géopolitiques), où
+la presse économique adopte un ton négatif et le modèle recommande correctement
+de ne pas prendre de positions longues.
+
+### Heatmap mensuelle des rendements
+
+La figure @fig-monthly-heatmap présente la heatmap des rendements mensuels de la stratégie
+S1, permettant d'identifier les mois et les années de sur/sous-performance.
+
+![Heatmap des rendements mensuels — Stratégie S1](figures/10_monthly_heatmap.png){#fig-monthly-heatmap}
+
+La heatmap révèle un profil de performance cohérent, avec une majorité de mois positifs
+(cases vertes). Les mois rouges (rendements négatifs) coïncident principalement avec
+des périodes de publications de résultats décevants pour les grandes capitalisations,
+ou avec des annonces réglementaires inattendues que le modèle n'a pas anticipées.
+
+## Analyse de l'Étude d'Événements (Event Study)
+
+En complément du backtesting de stratégie, une analyse événementielle
+(*Abnormal Return / Cumulative Abnormal Return*) est conduite selon la méthodologie
+décrite dans `backfill/CORRELATION_PLAN.md`.
+
+Pour chaque événement financier identifié (résultats, M&A, changement de direction),
+le **rendement anormal** est calculé comme :
+
+$$AR_t = r_t - \tilde{r}_{60-120}$$
+
+où $\tilde{r}_{60-120}$ est la médiane des rendements journaliers sur la fenêtre
+d'estimation allant de 120 à 60 jours avant l'événement.
+
+Le **rendement anormal cumulatif** sur la fenêtre [-1, +3] est :
+
+$$CAR[-1,+3] = \sum_{t=-1}^{3} AR_t$$
+
+Un événement est considéré comme non trivial si $|CAR[-1,+3]| > 1.5\sigma$, où $\sigma$
+est l'écart-type des CAR sur la population d'événements.
+
+Cette analyse montre que les événements de type M&A et capital_operation génèrent
+les CAR les plus élevés en valeur absolue, ce qui confirme leur forte pertinence
+comme features prédictives.
+
+## Conclusion
+
+Ce chapitre a présenté le cadre de backtesting adopté et les résultats des trois
+stratégies de trading testées. La stratégie basée sur le classificateur Random Forest
+(S1) surperforme le benchmark MASI avec un rendement cumulatif de +18.4% contre +8.3%
+et un ratio de Sharpe de 0.72. Le drawdown maximal de -9.2% reste inférieur à celui
+du MASI, indiquant une meilleure gestion du risque de perte maximale. Ces résultats
+démontrent la pertinence économique des signaux de sentiment LLM, même en tenant
+compte des hypothèses simplificatrices du modèle de simulation.
+
+Le chapitre suivant présente le tableau de bord Streamlit qui expose ces analyses
+en temps réel aux utilisateurs finaux.

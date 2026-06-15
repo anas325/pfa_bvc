@@ -1,0 +1,194 @@
+# Chapitre 3 : Ingénierie des Features
+
+## Introduction
+
+L'ingénierie des features — ou *feature engineering* — est souvent présentée comme l'art
+de transformer les données brutes en représentations qui maximisent le pouvoir prédictif
+des algorithmes d'apprentissage. Dans le contexte de la prédiction de signaux boursiers
+à partir de la presse financière, cette étape revêt une importance capitale : elle traduit
+l'information qualitative des articles (sentiment, événements, entités) en indicateurs
+quantitatifs temporellement alignés avec les données de prix.
+
+Ce chapitre décrit l'ensemble des features construites dans ce projet, organisées en
+quatre familles : les features d'extraction d'entités, les features de sentiment,
+les features d'événements et les features de prix. Il présente également les corrélations
+observées entre ces features et la variable cible.
+
+## Extraction et Mapping des Entités
+
+### Appariement article-ticker
+
+La première étape consiste à associer chaque article à un ou plusieurs titres boursiers.
+Deux mécanismes complémentaires sont utilisés.
+
+**Extraction par LLM.** L'analyseur LLM retourne directement une liste de tickers
+(`mentioned_tickers`) pour chaque article. Cette extraction est stockée dans la table
+`article_company_mentions` et constitue la source d'information primaire.
+
+**Fallback par correspondance textuelle.** Pour les articles dont l'analyse LLM a échoué
+ou qui ne contiennent pas de mentions de tickers, la fonction `map_entities()` applique
+une correspondance textuelle en comparant les tokens du titre et du texte de l'article
+avec les tokens des noms d'entreprises. Tous les tokens du nom d'une entreprise doivent
+être présents dans l'article pour qu'une mention soit confirmée, ce qui limite les
+faux positifs.
+
+La fonction `match_article_entities()` du module `rss_fetcher.py` effectue également
+un appariement de secteurs basé sur un seuil de 40% de tokens sectoriels présents
+dans l'article.
+
+### Construction de la table de mapping
+
+Le résultat de cette étape est un DataFrame avec les colonnes `(article_url, ticker, date)`,
+qui sert de clé de jointure entre les articles et les données de prix.
+
+## Features de Sentiment
+
+### Sentiment brut et agrégats temporels
+
+Pour chaque couple `(ticker, date)`, les features de sentiment sont calculées en agrégeant
+les scores des articles mentionnant ce ticker sur différentes fenêtres temporelles.
+
+**Sentiment du jour (J).** Score LLM moyen des articles publiés le jour $J$ mentionnant
+le titre boursier. Si plusieurs articles couvrent le même titre le même jour, la moyenne
+est pondérée par le score de confiance du LLM.
+
+**Fenêtre de 3 jours (J-2 à J).** Moyenne glissante du score de sentiment, du nombre
+d'articles et de la proportion d'articles positifs/négatifs sur les trois jours précédents.
+Cette fenêtre capture les signaux récents à court terme.
+
+**Fenêtre de 7 jours (J-6 à J).** Même agrégation sur une semaine glissante, capturant
+les tendances de sentiment à moyen terme. Des études empiriques sur les marchés émergents
+ont montré que l'impact médiatique sur les cours peut s'étaler sur une à deux semaines.
+
+Les features de sentiment produites sont :
+
+| Feature | Description |
+|---------|-------------|
+| `news_count` | Nombre d'articles le jour J |
+| `avg_sentiment` | Score moyen [-1, 1] le jour J |
+| `std_sentiment` | Écart-type du score le jour J |
+| `positive_ratio` | Proportion d'articles positifs le jour J |
+| `negative_ratio` | Proportion d'articles négatifs le jour J |
+| `news_count_3d` | Nombre d'articles sur 3 jours |
+| `avg_sentiment_3d` | Score moyen sur 3 jours |
+| `positive_ratio_3d` | Proportion positive sur 3 jours |
+| `news_count_7d` | Nombre d'articles sur 7 jours |
+| `avg_sentiment_7d` | Score moyen sur 7 jours |
+| `positive_ratio_7d` | Proportion positive sur 7 jours |
+
+## Features d'Événements
+
+### Détection règle-métier
+
+En complément de l'extraction LLM, un système de détection d'événements basé sur des
+expressions régulières et des lexiques spécialisés identifie quatre catégories d'événements
+financiers à fort impact potentiel :
+
+**Événements M&A** (*fusion-acquisition*) : détection des termes `acquisition`,
+`fusion`, `rachat`, `OPA`, `cession`, `prise de participation` et leurs variantes.
+Les opérations de croissance externe sont systématiquement associées à des mouvements
+de cours significatifs.
+
+**Événements de résultats financiers** : détection des termes `résultats`, `bénéfice`,
+`EBIT`, `EBITDA`, `chiffre d'affaires`, `dividende`, `bilan`. Ces publications périodiques
+constituent les événements les plus réguliers et les plus anticipés par le marché.
+
+**Événements de gouvernance** : détection des termes `PDG`, `directeur général`,
+`nomination`, `démission`, `conseil d'administration`. Les changements de dirigeants
+peuvent signaler des ruptures stratégiques importantes.
+
+**Événements contentieux et réglementaires** : détection des termes `procès`, `litige`,
+`sanction`, `amende`, `fraude`, `corruption`, `enquête`, `AMMC`. Ces événements ont
+généralement un impact négatif sur le cours.
+
+Ces indicateurs binaires sont encodés comme features `event_ma`, `event_earnings`,
+`event_management`, `event_legal`, chacun décliné en version instantanée (jour J)
+et en fenêtres glissantes 3j et 7j.
+
+### One-hot encoding des types d'événements LLM
+
+Les treize types d'événements de la taxonomie LLM sont encodés en variables indicatrices
+binaires (`0/1`) agrégées par fenêtres glissantes :
+
+| Type d'événement | Feature J | Feature 3j | Feature 7j |
+|-----------------|-----------|------------|------------|
+| `earnings_release` | `evt_earnings_release` | `evt_earnings_release_3d` | `evt_earnings_release_7d` |
+| `dividend_announcement` | `evt_dividend_announcement` | `evt_dividend_announcement_3d` | — |
+| `capital_operation` | `evt_capital_operation` | — | — |
+| `debt_issuance` | `evt_debt_issuance` | — | — |
+| `ma_deal` | `evt_ma_deal` | `evt_ma_deal_3d` | `evt_ma_deal_7d` |
+| `leadership_change` | `evt_leadership_change` | `evt_leadership_change_3d` | — |
+| `regulatory_action` | `evt_regulatory_action` | — | — |
+| `strategic_plan` | `evt_strategic_plan` | — | — |
+| `market_data` | `evt_market_data` | `evt_market_data_3d` | — |
+| `economic_indicator` | `evt_economic_indicator` | — | — |
+| `project_contract` | `evt_project_contract` | — | — |
+| `ipo_listing` | `evt_ipo_listing` | — | — |
+| `other` | `evt_other` | — | — |
+
+Au total, la combinaison des features règle-métier et LLM produit environ vingt-cinq
+indicateurs d'événements.
+
+## Features de Prix
+
+### Indicateurs OHLCV
+
+Les données de prix journalières fournissent les features numériques suivantes :
+
+| Feature | Description |
+|---------|-------------|
+| `close` | Cours de clôture |
+| `open` | Cours d'ouverture |
+| `high` | Plus haut du jour |
+| `low` | Plus bas du jour |
+| `volume` | Volume échangé |
+| `change_pct` | Variation journalière en % |
+| `daily_return` | Rendement logarithmique $\ln(P_t/P_{t-1})$ |
+
+### Variable cible
+
+La variable à prédire est `next_day_return` (le rendement du lendemain) pour la tâche
+de régression, et `direction` ($1$ si rendement positif, $0$ sinon) pour la tâche
+de classification. La colonne `has_news` indique si au moins un article a été collecté
+pour ce titre ce jour-là.
+
+## Analyse des Corrélations
+
+La figure @fig-feature-correlations présente la matrice de corrélation des principales
+features numériques.
+
+![Matrice de corrélation des features principales](figures/04_feature_correlations.png){#fig-feature-correlations}
+
+L'examen de cette matrice révèle plusieurs observations importantes. Les features de
+sentiment à différentes fenêtres temporelles sont fortement corrélées entre elles
+(`avg_sentiment`, `avg_sentiment_3d`, `avg_sentiment_7d`), ce qui suggère une certaine
+autocorrélation du discours médiatique. La corrélation entre le sentiment et le rendement
+du lendemain (`next_day_return`) est positive mais modérée, confirmant la pertinence
+du signal tout en indiquant qu'il ne suffit pas à lui seul à expliquer les mouvements
+de cours.
+
+Les indicateurs d'événements M&A présentent une corrélation plus marquée avec les
+rendements que les indicateurs de résultats, ce qui s'explique par le caractère souvent
+surprenant des annonces d'acquisitions sur des marchés de taille intermédiaire comme la BVC.
+
+## Importance des Features
+
+La figure @fig-feature-importance présente l'importance des features selon le modèle
+Random Forest entraîné sur le dataset complet.
+
+![Importance des features (Random Forest)](figures/05_feature_importance.png){#fig-feature-importance}
+
+On observe que les features de prix récentes (`daily_return`, `close`, `change_pct`)
+dominent le classement, ce qui est attendu pour un horizon de prédiction très court terme
+(J+1). Parmi les features textuelles, `avg_sentiment_3d`, `news_count_7d` et
+`evt_earnings_release_3d` figurent dans le top vingt, ce qui confirme la valeur informative
+des signaux de presse pour la prédiction des mouvements boursiers.
+
+## Conclusion
+
+Ce chapitre a décrit l'ensemble du processus d'ingénierie des features, depuis l'appariement
+des articles aux tickers boursiers jusqu'à la construction d'un tableau de features
+structuré par couple `(ticker, date)` comprenant environ quatre-vingts colonnes. La combinaison
+de features de sentiment LLM, d'indicateurs d'événements par règles métier et de données
+de prix constitue une représentation riche qui alimente les modèles prédictifs décrits
+dans le chapitre suivant.

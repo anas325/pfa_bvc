@@ -1,0 +1,167 @@
+# Chapitre 2 : Prétraitement des Données
+
+## Introduction
+
+La collecte de données brutes depuis des sources hétérogènes génère inévitablement des
+impuretés qui, si elles ne sont pas traitées, dégradent la qualité des analyses en aval.
+Ce chapitre décrit les opérations de prétraitement appliquées aux données collectées :
+déduplication des articles, normalisation des textes, gestion des valeurs manquantes,
+validation de schéma et standardisation des données de prix. Chaque opération est justifiée
+par les caractéristiques spécifiques des données observées lors de l'exploration.
+
+## Déduplication des Articles
+
+### Problème
+
+Les flux RSS des différentes sources publient fréquemment le même article sous des URLs
+légèrement différentes (variantes de paramètres d'URL, redirections, pages mobiles vs desktop).
+Par ailleurs, un même événement économique est souvent couvert par plusieurs sources le même
+jour, ce qui ne constitue pas un doublon au sens strict mais peut biaiser les agrégats
+de sentiment si l'on ne prend pas garde au comptage.
+
+### Solution : déduplication par URL
+
+La déduplication primaire s'effectue par URL. La table `articles` de PostgreSQL dispose
+d'une contrainte `UNIQUE` sur la colonne `url`, ce qui garantit l'idempotence des insertions.
+Côté Python, la liste des URLs déjà présentes en base est chargée en mémoire au démarrage
+du pipeline et utilisée pour filtrer les nouvelles entrées avant tout appel LLM.
+
+### Solution : déduplication sémantique des événements
+
+Au-delà de la déduplication par URL, le système implémente une déduplication sémantique
+des **événements** sous-jacents. Quand cinq articles différents couvrent la même annonce
+de résultats d'une société, ils représentent cinq articles distincts mais un seul événement.
+L'empreinte d'événement est calculée par `ArticleSentiment.compute_fingerprint()` comme
+suit :
+
+```
+fingerprint = md5(event_type + "::" + sorted(tickers) + "::" + iso_week)
+```
+
+Ainsi, tous les articles couvrant le même type d'événement pour les mêmes sociétés dans
+la même semaine partagent le même `event_fingerprint`. La table `events` est mise à jour
+par `UPSERT ON CONFLICT`, incrémentant le compteur `article_count` à chaque nouveau
+article couvert.
+
+## Normalisation des Textes
+
+### Nettoyage HTML
+
+Pour les articles dont le texte intégral est extrait par scraping, le HTML brut contient
+des balises, des espaces multiples, des tabulations et des caractères spéciaux qui doivent
+être supprimés. BeautifulSoup4 est utilisé avec le parseur `html5lib` pour parser le HTML
+et extraire uniquement le contenu textuel des éléments ciblés par les sélecteurs CSS.
+
+### Gestion du multilinguisme
+
+Le corpus couvre trois langues : le français (majorité des sources), l'arabe (Hespress Arabic)
+et l'anglais (Reuters). Le champ `language` de la table `articles` est renseigné depuis
+les métadonnées du flux RSS (`feed.language`). Cette information est transmise au LLM dans
+le prompt d'analyse, qui est conçu pour traiter les trois langues sans modification.
+
+### Normalisation du sentiment
+
+Les sorties du LLM présentent des variantes linguistiques dans l'expression du sentiment
+(un modèle francophone peut répondre `positif` au lieu de `positive`). La méthode
+`normalize_sentiment()` du modèle `ArticleSentiment` applique un mapping exhaustif :
+
+```python
+SENTIMENT_MAP = {
+    "positif": "positive", "positive": "positive",
+    "négatif": "negative", "negatif": "negative", "negative": "negative",
+    "neutre": "neutral", "neutral": "neutral",
+    "mixte": "neutral", "mixed": "neutral",
+}
+```
+
+Un mécanisme similaire est appliqué aux types d'événements via `normalize_event_type()`,
+qui mappe les variantes françaises vers les identifiants canoniques anglais.
+
+## Gestion des Valeurs Manquantes
+
+### Articles sans texte intégral
+
+Pour les sources sans scraper enregistré, le champ `full_text` peut être nul ou limité
+au résumé RSS. Dans ce cas, le pipeline utilise le titre et le résumé comme substitut
+pour l'analyse LLM. Cette stratégie est un compromis acceptable : les titres d'articles
+financiers contiennent souvent suffisamment d'information pour déterminer le sentiment
+et identifier les entités, même si la profondeur de l'analyse s'en trouve réduite.
+
+### Scores de sentiment manquants
+
+Lors de la construction de la couche gold, certains articles peuvent ne pas avoir de
+score de sentiment LLM (échec d'analyse, article trop court). Pour ces cas, la fonction
+`enrich_articles()` implémente un **sentiment lexical de repli** (*fallback*) basé sur
+un lexique de polarité adapté au domaine financier marocain :
+
+- Les termes positifs incluent les mots français de performance financière :
+  *bénéfice, hausse, progression, croissance, résultats positifs, dividende, acquisition
+  réussie*, etc.
+- Les termes négatifs comprennent : *perte, baisse, chute, difficultés, litige, fraude,
+  déficit, démission*, etc.
+- Une détection de la négation (*ne...pas, aucun, jamais, sans*) inverse la polarité.
+- Une détection de la modalité (*pourrait, rumeur, discussion, projet*) réduit le score
+  en valeur absolue.
+
+### Données de prix manquantes
+
+Les données historiques de prix présentent des lacunes pour les jours fériés marocains
+et les jours de faible liquidité de certains titres. Ces lacunes sont traitées par
+propagation de la valeur précédente (*forward fill*) pour les indicateurs de niveau
+(cours de clôture) et par remplissage à zéro pour les indicateurs de flux (volume,
+rendement).
+
+## Standardisation des Données de Prix
+
+### Nettoyage des fichiers historiques CSV
+
+Les fichiers CSV d'historique boursier présentent des hétérogénéités : séparateurs
+décimaux variables (virgule ou point), formats de dates différents selon la source,
+présence ou absence de la colonne volume pour certains titres peu liquides. Un processus
+de nettoyage standardisé est appliqué lors du chargement initial dans PostgreSQL :
+
+1. Détection automatique du séparateur décimal via inspection des premières lignes.
+2. Parsing des dates avec gestion de plusieurs formats (`%d/%m/%Y`, `%Y-%m-%d`, `%b %d, %Y`).
+3. Conversion des cours en valeurs numériques flottantes.
+4. Remplacement des valeurs aberrantes (cours négatifs, volumes négatifs) par `NULL`.
+
+### Calcul des rendements
+
+La variable cible principale du pipeline de modélisation est le **rendement journalier**,
+défini comme :
+
+$$r_t = \frac{P_t - P_{t-1}}{P_{t-1}}$$
+
+où $P_t$ est le cours de clôture ajusté à la date $t$. Le **rendement du lendemain**
+$r_{t+1}$ est la variable à prédire. La **direction** est définie comme :
+
+$$d_t = \begin{cases} 1 & \text{si } r_{t+1} > 0 \\ 0 & \text{sinon} \end{cases}$$
+
+Ces calculs sont effectués dans la fonction `build_daily_signals()` du module `gold/features.py`.
+
+## Validation de Schéma
+
+Toutes les données transitent par des modèles Pydantic avant d'être stockées en base,
+ce qui garantit la validation des types, des contraintes de valeur (score ∈ [-1, 1],
+confidence ∈ [0, 1]) et de la présence des champs obligatoires. Les erreurs de validation
+sont capturées et journalisées sans interrompre le pipeline.
+
+La figure @fig-missing-values illustre le taux de complétude par colonne dans la table
+principale `daily_signals` de la couche gold.
+
+![Taux de complétude des colonnes de la table daily_signals](figures/03_missing_values.png){#fig-missing-values}
+
+On observe que les colonnes de prix (OHLCV) présentent un taux de complétude proche de 100%,
+tandis que les colonnes de sentiment et d'événements sont plus lacunaires pour les périodes
+antérieures au démarrage du pipeline RSS, ce qui est attendu.
+
+## Conclusion
+
+Ce chapitre a présenté les principales opérations de prétraitement appliquées aux données
+brutes : déduplication par URL et par empreinte sémantique d'événement, normalisation
+des textes et des sorties LLM, gestion des valeurs manquantes par repli lexical et
+propagation temporelle, standardisation des données de prix et validation de schéma.
+
+Ces opérations constituent les fondations du pipeline d'ingénierie des features décrit
+dans le chapitre suivant, qui transforme ces données nettoyées en représentations
+numériques exploitables par les algorithmes d'apprentissage supervisé.

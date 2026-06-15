@@ -1,0 +1,22 @@
+# Remerciements {.unnumbered}
+
+Au terme de ce projet de fin d'études, il m'est agréable d'exprimer ma profonde gratitude
+à toutes les personnes qui ont contribué, de près ou de loin, à la réalisation de ce travail.
+
+Je tiens en premier lieu à remercier chaleureusement **mon encadrant pédagogique**
+pour son suivi rigoureux, ses conseils avisés et sa disponibilité tout au long de cette expérience.
+Ses orientations ont été d'une valeur inestimable pour mener à bien ce projet.
+
+Mes vifs remerciements s'adressent également à **l'ensemble du corps enseignant** de mon
+établissement, dont l'enseignement de qualité m'a doté des compétences nécessaires pour
+aborder des problématiques complexes à l'interface de l'ingénierie des données, de
+l'intelligence artificielle et de la finance de marché.
+
+Je souhaite exprimer ma reconnaissance envers **les membres du jury** qui ont bien voulu
+consacrer leur temps et leur expertise à l'évaluation de ce rapport.
+
+Enfin, je remercie **ma famille** pour son soutien moral et ses encouragements permanents,
+sans lesquels cet effort n'aurait pu être accompli dans les meilleures conditions.
+
+Que toutes ces personnes trouvent ici l'expression de ma sincère gratitude et de mon
+profond respect.

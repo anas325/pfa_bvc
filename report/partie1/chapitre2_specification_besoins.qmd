@@ -1,0 +1,282 @@
+# Chapitre 2 : Spécification des Besoins
+
+## Introduction
+
+La spécification des besoins constitue une étape fondamentale dans tout projet d'ingénierie
+logicielle. Elle permet de formaliser, avant toute implémentation, l'ensemble des fonctionnalités
+attendues du système et les contraintes non fonctionnelles qui conditionnent sa qualité.
+Ce chapitre présente les besoins fonctionnels et non fonctionnels du système de veille
+financière, identifie les acteurs impliqués et décrit les cas d'utilisation sous une
+forme structurée, accompagnée d'un diagramme global.
+
+## Besoins Fonctionnels
+
+Les besoins fonctionnels décrivent les fonctionnalités que le système doit réaliser pour
+répondre aux objectifs du projet. Ils sont regroupés en six familles.
+
+### Collecte et ingestion des données
+
+**BF1 — Collecte RSS en temps réel.**
+Le système doit interroger périodiquement treize flux RSS de sources d'actualités économiques
+marocaines et internationales, filtrer les articles publiés dans les sept derniers jours,
+déduplicater par URL et stocker les articles bruts dans la base de données.
+
+**BF2 — Extraction du texte intégral.**
+Pour les sources disposant d'un scraper enregistré (LeMatin, Challenge), le système doit
+récupérer le corps complet de l'article en HTML, nettoyer les balises et stocker le texte brut.
+
+**BF3 — Scraping des cours boursiers.**
+Un spider Scrapy doit collecter quotidiennement (en semaine à 17h) les cours de clôture,
+d'ouverture, les plus hauts/bas et les volumes de transaction pour l'ensemble des titres cotés
+sur la BVC, depuis le site LeMatin Bourse.
+
+**BF4 — Collecte des taux de change BKAM.**
+Un spider Scrapy doit collecter quotidiennement (en semaine à 10h) les taux d'achat et de vente
+des principales devises publiés par Bank Al-Maghrib, et les stocker dans la table dédiée.
+
+**BF5 — Backfill historique.**
+Le système doit permettre la reconstruction d'une archive historique d'articles via l'Internet
+Archive CDX API, pour les domaines de presse configurés. Cette fonctionnalité doit couvrir
+l'indexation des URLs archivées et le téléchargement des contenus HTML compressés.
+
+**BF6 — Ingestion des données de commodités.**
+Le système doit collecter les prix historiques et quotidiens des principales matières premières
+pertinentes pour l'économie marocaine (or, phosphates, pétrole, etc.) et les stocker dans
+la table dédiée.
+
+### Analyse sémantique et enrichissement
+
+**BF7 — Analyse de sentiment par LLM.**
+Pour chaque article non encore analysé, le système doit soumettre titre et corps à un LLM
+(LLaMA 3.1 via Ollama ou OpenRouter) et obtenir en retour : un label de sentiment
+(positif/négatif/neutre), un score numérique [-1, 1], un indice de confiance [0, 1],
+un raisonnement textuel, une liste de titres boursiers mentionnés, une liste de secteurs,
+un type d'événement parmi treize catégories, une date d'événement si mentionnée, une liste
+de personnalités citées et une empreinte de déduplication des événements.
+
+**BF8 — Extraction des entités nommées.**
+Le système doit effectuer un appariement entre les articles et les sociétés cotées
+sur la base d'une correspondance textuelle sur les tickers et les noms d'entreprises.
+En parallèle, l'extraction LLM fournit une identification des entités par compréhension
+sémantique.
+
+**BF9 — Déduplication des événements.**
+Le système doit calculer une empreinte déterministe par événement, combinant le type
+d'événement, les titres impliqués et la semaine ISO, afin d'éviter la multiplication
+de nœuds d'événements redondants lors de la couverture d'un même fait par plusieurs sources.
+
+### Stockage et persistance
+
+**BF10 — Stockage relationnel (PostgreSQL).**
+Toutes les entités — articles, sentiments, mentions, événements, personnes, cours, taux,
+commodités — doivent être stockées dans un schéma PostgreSQL structuré avec des contraintes
+d'unicité, des clés étrangères et des index appropriés.
+
+**BF11 — Stockage graphe (Neo4j).**
+Le sous-ensemble des entités correspondant aux actualités (articles, sentiments, entreprises,
+secteurs, événements, personnes) doit également être stocké dans un graphe Neo4j, permettant
+des traversées de graphe pour identifier des patterns relationnels (co-mentions, propagation
+de rumeurs, réseaux de personnes).
+
+**BF12 — Stockage objet (MinIO).**
+Les documents téléchargés depuis l'AMMC (rapports réglementaires, communiqués) doivent
+être stockés dans un bucket MinIO organisé par année et par catégorie.
+
+### Couche analytique (gold layer)
+
+**BF13 — Construction des features journalières.**
+Un pipeline nightly doit transformer les données silver en features analytiques pour chaque
+couple (titre boursier, date), intégrant les agrégats de sentiment, les indicateurs d'événements
+et les métriques de prix.
+
+**BF14 — Construction des agrégats hebdomadaires et mensuels.**
+Le pipeline gold doit également construire des tables d'agrégation par semaine et par mois,
+facilitant les analyses de tendances à plus long terme.
+
+**BF15 — Dimension entreprise.**
+Une table de dimension entreprise doit consolider les informations statiques (secteur, CEO,
+fondation, siège) et les statistiques dynamiques (nombre d'articles, sentiment moyen historique,
+type d'événement dominant).
+
+### Modélisation et prédiction
+
+**BF16 — Entraînement des modèles prédictifs.**
+Le système doit permettre l'entraînement d'un classificateur Random Forest pour prédire
+la direction du cours du lendemain (hausse/baisse) et d'un régresseur pour prédire
+le rendement attendu.
+
+**BF17 — Backtesting de stratégies.**
+Le système doit implémenter un cadre de backtesting permettant d'évaluer les stratégies
+de trading générées par les signaux du modèle, avec calcul des rendements cumulatifs,
+du drawdown maximal et du ratio de Sharpe.
+
+### Supervision et tableau de bord
+
+**BF18 — Tableau de bord Streamlit.**
+Un tableau de bord multi-pages doit exposer en temps réel : la vue d'ensemble du système
+(KPI), l'historique des exécutions des pipelines, le flux en direct des articles analysés
+et les cours boursiers.
+
+**BF19 — Journalisation structurée.**
+Chaque exécution de pipeline doit être journalisée dans une base SQLite locale, avec les
+métriques de performance (articles traités, échecs, durée, erreurs).
+
+## Besoins Non Fonctionnels
+
+### Performance
+
+**BNF1 — Latence d'analyse.**
+L'analyse d'un article par le LLM ne doit pas dépasser 120 secondes en configuration locale
+(LLaMA 3.1 8B sur GPU ou CPU). En configuration cloud (OpenRouter), ce délai est réduit à
+moins de 30 secondes par article.
+
+**BNF2 — Débit du pipeline RSS.**
+Le pipeline RSS doit être capable de traiter un minimum de cinquante articles par heure
+en mode normal, et de montée en charge jusqu'à cinq cents articles lors des phases de backfill.
+
+**BNF3 — Fraîcheur des données.**
+Les articles doivent être collectés et analysés dans un délai maximal d'une heure après
+leur publication pour les flux RSS actifs.
+
+### Fiabilité
+
+**BNF4 — Reprise sur erreur.**
+Chaque pipeline doit implémenter un mécanisme de reprise sur erreur : les articles déjà
+traités ne doivent pas être retraités lors d'une nouvelle exécution. Les opérations
+de base de données doivent être idempotentes (upsert).
+
+**BNF5 — Tolérance aux pannes LLM.**
+En cas d'échec de l'appel LLM, le système doit effectuer trois tentatives avec backoff
+exponentiel (5s, 10s, 20s) avant de consigner l'erreur et de passer à l'article suivant.
+
+**BNF6 — Disponibilité des services.**
+Les services d'infrastructure (Neo4j, PostgreSQL, MinIO) doivent être démarrés via Docker
+Compose avec des politiques de redémarrage automatique en cas de panne.
+
+### Maintenabilité
+
+**BNF7 — Configuration externalisée.**
+Toutes les configurations opérationnelles (liste des flux RSS, paramètres LLM, fenêtres
+temporelles, modèle cible) doivent être externalisées dans des fichiers YAML sans nécessiter
+de modification du code source.
+
+**BNF8 — Extensibilité des sources.**
+L'ajout d'une nouvelle source d'actualités doit se réduire à l'ajout d'une entrée dans
+le fichier `rss_feeds.yaml` et, si nécessaire, à l'implémentation d'une fonction de scraping
+référencée dans le dictionnaire `SCRAPERS`.
+
+**BNF9 — Observabilité.**
+Chaque pipeline doit journaliser ses métriques dans une table dédiée, consultable via
+le tableau de bord sans accès direct à la base de données.
+
+### Sécurité
+
+**BNF10 — Gestion des secrets.**
+Les clés d'API (Tavily, OpenRouter) et les mots de passe de bases de données ne doivent
+jamais être codés en dur dans le source. Ils doivent être injectés via des variables
+d'environnement chargées depuis un fichier `.env` non versionné.
+
+**BNF11 — Isolation réseau.**
+Les services Docker doivent communiquer sur un réseau bridge privé (`bvc_net`), sans
+exposition inutile de ports à l'extérieur de l'hôte.
+
+### Évolutivité
+
+**BNF12 — Ajout de modèles.**
+L'architecture doit permettre l'intégration de nouveaux analyseurs LLM (ollama, openrouter,
+ou un analyseur custom) sans modification des couches de collecte ni de stockage,
+via le protocole `ArticleAnalyzer`.
+
+**BNF13 — Portabilité.**
+L'ensemble du système doit être déployable sur toute machine disposant de Docker, Python 3.12
+et du gestionnaire de paquets `uv`, sans dépendance à un système d'exploitation spécifique.
+
+## Identification des Acteurs
+
+Le système implique trois catégories d'acteurs :
+
+**L'administrateur système** est responsable du déploiement de l'infrastructure Docker,
+de la configuration des variables d'environnement, du démarrage des DAGs Airflow et
+de la maintenance des services. Il interagit directement avec la couche d'infrastructure.
+
+**Le data engineer / data scientist** configure les flux RSS et les paramètres des pipelines,
+exécute les scripts d'exploration (notebooks), entraîne et évalue les modèles prédictifs
+et gère les évolutions du schéma de données.
+
+**L'analyste financier / utilisateur final** consulte le tableau de bord Streamlit pour
+suivre les signaux de sentiment, les actualités récentes, les performances des pipelines
+et les cours boursiers. Il n'interagit pas directement avec les composants techniques.
+
+**Airflow (acteur système)** déclenche automatiquement les pipelines selon les planifications
+définies, sans intervention humaine. Il constitue l'acteur principal des interactions répétitives.
+
+## Cas d'Utilisation
+
+### Tableau des cas d'utilisation
+
+| **ID** | **Acteur** | **Objectif** | **Préconditions** | **Postconditions** | **Scénario nominal** | **Scénario alternatif** |
+|--------|-----------|-------------|-------------------|-------------------|---------------------|------------------------|
+| UC1 | Airflow | Collecter les articles RSS | Flux RSS configurés, BDD accessible | Articles stockés, doublons ignorés | 1. Charger les flux depuis YAML. 2. Interroger chaque feed via feedparser. 3. Filtrer par date. 4. Déduplicater. 5. Stocker. | Si le feed est inaccessible, journaliser l'erreur et passer au suivant. |
+| UC2 | Airflow | Analyser le sentiment des articles | Articles non analysés présents | SentimentScore créé, mentions stockées | 1. Récupérer les articles non analysés. 2. Construire le prompt LLM. 3. Appeler l'API. 4. Parser la réponse structurée. 5. Stocker en BDD. | Si le LLM échoue 3 fois, marquer l'article comme échoué et continuer. |
+| UC3 | Airflow | Scraper les cours boursiers | Spider Scrapy configuré | Cours du jour stockés dans `stock_prices` | 1. Lancer le spider `lematin`. 2. Extraire le tableau des cours. 3. Parser les colonnes OHLCV. 4. Upsert en BDD. | Si la page est inaccessible, journaliser et programmer une relance. |
+| UC4 | Airflow | Collecter les taux BKAM | Date d'exécution disponible | Taux du jour dans `bkam_rates` | 1. Construire l'URL pour la date. 2. Récupérer le tableau HTML. 3. Parser avec pandas. 4. Upsert en BDD. | Si le site BKAM est indisponible, réessayer lors du prochain run. |
+| UC5 | Airflow | Rafraîchir la couche gold | Données silver disponibles | Tables gold mises à jour | 1. Extraire depuis silver. 2. Mapper les entités. 3. Construire les features. 4. Écrire dans gold. | En cas d'erreur de jointure, journaliser et continuer avec les données disponibles. |
+| UC6 | Data Engineer | Lancer le backfill CDX | Configs de domaines disponibles | Index.parquet + HTML.gz stockés | 1. Interroger CDX API par domaine. 2. Sauvegarder l'index. 3. Télécharger les HTML. 4. Compresser. | Si une URL est inaccessible, la marquer dans le log. |
+| UC7 | Data Engineer | Entraîner un modèle | Features gold disponibles | Modèle .pkl + métriques enregistrés | 1. Charger `daily_signals`. 2. Séparer train/test. 3. Entraîner RF. 4. Évaluer. 5. Sauvegarder. | Si le dataset est insuffisant, lever une exception explicite. |
+| UC8 | Data Engineer | Ajouter une source RSS | Accès au fichier YAML | Nouvelle source active au prochain run | 1. Ajouter entrée dans `rss_feeds.yaml`. 2. Optionnellement implémenter scraper. 3. Relancer le pipeline. | Si le flux est invalide, feedparser lève une exception capturée. |
+| UC9 | Analyste | Consulter le tableau de bord | Dashboard Streamlit démarré | Visualisation en temps réel | 1. Ouvrir http://localhost:8501. 2. Naviguer entre les pages. 3. Filtrer par ticker ou date. | Si la BDD est inaccessible, afficher un message d'erreur. |
+| UC10 | Analyste | Suivre les exécutions | Pipelines Airflow actifs | Vue des succès/échecs des runs | 1. Accéder à la page « Runs ». 2. Sélectionner un pipeline. 3. Visualiser métriques et logs. | Si SQLite est inaccessible, afficher les données Airflow directement. |
+
+### Diagramme global des cas d'utilisation
+
+```{mermaid}
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '14px'}}}%%
+graph LR
+    subgraph Acteurs
+        A[Airflow]
+        DE[Data Engineer]
+        AF[Analyste Financier]
+        AS[Administrateur Système]
+    end
+
+    subgraph "Système de Veille BVC"
+        UC1(UC1 - Collecter flux RSS)
+        UC2(UC2 - Analyser sentiment LLM)
+        UC3(UC3 - Scraper cours boursiers)
+        UC4(UC4 - Collecter taux BKAM)
+        UC5(UC5 - Rafraîchir couche gold)
+        UC6(UC6 - Backfill CDX)
+        UC7(UC7 - Entraîner modèle prédictif)
+        UC8(UC8 - Ajouter source RSS)
+        UC9(UC9 - Consulter tableau de bord)
+        UC10(UC10 - Suivre exécutions)
+        UC11(UC11 - Déployer infrastructure)
+    end
+
+    A --> UC1
+    A --> UC2
+    A --> UC3
+    A --> UC4
+    A --> UC5
+    DE --> UC6
+    DE --> UC7
+    DE --> UC8
+    AF --> UC9
+    AF --> UC10
+    AS --> UC11
+
+    UC1 -.->|include| UC2
+    UC5 -.->|include| UC1
+```
+
+## Conclusion
+
+Ce chapitre a établi la liste exhaustive des besoins fonctionnels et non fonctionnels du
+système, identifié les quatre acteurs principaux et formalisé dix cas d'utilisation clés
+dans des tableaux structurés. Le diagramme global illustre la répartition des responsabilités
+entre les acteurs humains et l'acteur système Airflow, qui prend en charge l'essentiel
+des interactions répétitives.
+
+Ces spécifications constituent le cahier des charges que la conception détaillée du
+chapitre suivant devra satisfaire, en proposant une architecture logicielle cohérente
+avec ces exigences.

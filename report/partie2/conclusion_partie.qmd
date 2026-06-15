@@ -1,0 +1,42 @@
+# Conclusion de la Deuxième Partie {.unnumbered}
+
+La deuxième partie de ce rapport a couvert l'intégralité du pipeline de données et de
+modélisation, depuis la collecte des données brutes jusqu'au tableau de bord de supervision.
+
+Le premier chapitre a présenté les quatre familles de sources de données mobilisées —
+flux RSS en temps réel, archives historiques via Internet Archive CDX, données boursières
+OHLCV et prix des matières premières — ainsi que les statistiques du corpus constitué,
+couvrant soixante-seize sociétés cotées sur plusieurs années.
+
+Le deuxième chapitre a décrit les opérations de prétraitement indispensables : déduplication
+par URL et par empreinte sémantique d'événement, normalisation des textes et des sorties LLM,
+gestion des valeurs manquantes par repli lexical et propagation temporelle, et validation
+de schéma via Pydantic.
+
+Le troisième chapitre a détaillé le processus d'ingénierie des features, qui transforme
+les données textuelles enrichies en un tableau structuré d'environ quatre-vingts colonnes
+par couple (ticker, date), intégrant des features de sentiment à fenêtres glissantes,
+des indicateurs d'événements par règles métier et les encodages one-hot des treize types
+d'événements LLM.
+
+Le quatrième chapitre a présenté la formulation du problème de prédiction et la démarche
+de modélisation : construction du dataset avec split temporel strict, choix et justification
+du Random Forest comme modèle principal pour la classification directionnelle et la
+régression du rendement, et recherche des hyperparamètres optimaux par validation croisée
+temporelle.
+
+Le cinquième chapitre a évalué quantitativement les modèles : le classificateur atteint
+une précision de 57.2% et une AUC-ROC de 0.61, avec un biais asymétrique vers la détection
+des hausses cohérent avec le corpus médiatique positif.
+
+Le sixième chapitre a validé la pertinence économique des signaux par backtesting :
+la stratégie basée sur le classificateur surperforme le MASI (+18.4% vs +8.3%)
+avec un meilleur ratio de Sharpe (0.72 vs 0.15) et un drawdown maximal réduit (-9.2% vs -11.3%).
+
+Le septième chapitre a décrit le tableau de bord Streamlit, qui expose l'ensemble
+de ces analyses à travers quatre pages dédiées aux analystes financiers et aux équipes
+de supervision.
+
+L'ensemble de ces résultats valide la faisabilité technique et la pertinence économique
+du système de veille financière intelligente développé dans ce projet, tout en identifiant
+plusieurs pistes d'amélioration que la conclusion générale développe.

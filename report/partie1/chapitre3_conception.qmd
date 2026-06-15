@@ -1,0 +1,518 @@
+# Chapitre 3 : Conception
+
+## Introduction
+
+La conception est l'étape qui traduit les exigences spécifiées au chapitre précédent en
+une architecture logicielle concrète. Ce chapitre présente la modélisation du système
+selon deux dimensions complémentaires : la modélisation dynamique, qui décrit le comportement
+du système dans le temps, et la modélisation statique, qui en représente la structure.
+Les diagrammes sont produits selon la notation UML standard et s'appuient sur le méta-langage
+Mermaid pour leur rendu.
+
+## Architecture Logicielle Globale
+
+Le système est organisé selon un principe de **pipeline multi-couches** inspiré de l'architecture
+médaillon (bronze/silver/gold) popularisée dans l'ingénierie des données modernes.
+
+La **couche de collecte** regroupe les composants responsables de l'acquisition des données
+brutes depuis les sources externes : flux RSS via `feedparser`, pages web via Scrapy, et
+archives historiques via le protocole CDX. Cette couche est sans état et idempotente.
+
+La **couche silver** stocke les données dans leur forme analytique enrichie. Elle est
+implémentée sur deux technologies complémentaires : PostgreSQL pour la persistance relationnelle
+et les requêtes analytiques, et Neo4j pour la représentation graphe des relations entre entités.
+Un module d'analyse LLM (`rss/analyzer.py`) enrichit chaque article avec des métadonnées
+sémantiques structurées.
+
+La **couche gold** transforme nightly les données silver en features analytiques prêtes pour
+la modélisation. Elle est implémentée en Python pur (`gold/pipeline.py`) et écrit ses résultats
+dans un schéma PostgreSQL dédié.
+
+La **couche de présentation** comprend le tableau de bord Streamlit et les notebooks Jupyter,
+qui consomment directement les tables gold pour la visualisation et la modélisation.
+
+L'**orchestration** est assurée par Apache Airflow, qui planifie et supervise l'exécution
+des quatre DAGs selon leurs calendriers respectifs.
+
+```{mermaid}
+graph TB
+    subgraph Sources
+        RSS[Flux RSS<br/>13 sources]
+        BKAM[BKAM.ma<br/>taux de change]
+        LM[LeMatin Bourse<br/>cours quotidiens]
+        CDX[Internet Archive<br/>CDX API]
+        COMD[Yahoo Finance<br/>commodités]
+    end
+
+    subgraph "Couche Collecte"
+        RF[rss_fetcher.py<br/>feedparser + scrapers]
+        BS[bkam_spider.py]
+        LS[lematin_spider.py]
+        BF[backfill/ingest.py]
+        CI[commodity_ingestion.py]
+    end
+
+    subgraph "Couche Silver"
+        PG[(PostgreSQL<br/>pfa_bvc)]
+        N4J[(Neo4j<br/>Graphe)]
+        LLM[LLM Analyzer<br/>LLaMA 3.1 via Ollama]
+        MINIO[(MinIO<br/>Stockage objets)]
+    end
+
+    subgraph "Couche Gold"
+        GP[gold/pipeline.py]
+        PGG[(PostgreSQL<br/>gold schema)]
+    end
+
+    subgraph Présentation
+        ST[Streamlit<br/>Dashboard]
+        NB[Jupyter<br/>Notebooks]
+        AF2[Apache Airflow<br/>Orchestration]
+    end
+
+    RSS --> RF
+    BKAM --> BS
+    LM --> LS
+    CDX --> BF
+    COMD --> CI
+
+    RF --> LLM
+    LLM --> PG
+    LLM --> N4J
+    BS --> PG
+    LS --> PG
+    BF --> PG
+    CI --> PG
+
+    PG --> GP
+    GP --> PGG
+
+    PGG --> ST
+    PGG --> NB
+    PG --> NB
+    N4J --> NB
+
+    AF2 -.-> RF
+    AF2 -.-> BS
+    AF2 -.-> LS
+    AF2 -.-> GP
+```
+
+## Modélisation Dynamique
+
+### Diagramme de séquence — Pipeline RSS (collecte et analyse)
+
+Ce diagramme représente le déroulement d'une exécution complète du pipeline RSS,
+depuis le déclenchement par Airflow jusqu'au stockage des résultats enrichis.
+
+```{mermaid}
+sequenceDiagram
+    participant AF as Airflow
+    participant PL as pipeline.py
+    participant FE as rss_fetcher.py
+    participant RSS as Flux RSS
+    participant LLM as LLM Analyzer
+    participant PG as PostgreSQL
+    participant N4J as Neo4j
+
+    AF->>PL: Déclenchement (cron horaire)
+    PL->>PL: Charger rss_feeds.yaml
+    PL->>PG: get_stored_article_urls()
+    PG-->>PL: Set d'URLs existantes
+
+    loop Pour chaque flux activé
+        PL->>FE: fetch_feed(url, lookback_days=7)
+        FE->>RSS: GET flux RSS
+        RSS-->>FE: Entrées Atom/RSS
+        FE->>FE: Filtrer par date
+        alt scraper configuré
+            FE->>RSS: GET page article (HTML)
+            RSS-->>FE: HTML complet
+            FE->>FE: Extraire texte via sélecteur CSS
+        end
+        FE-->>PL: Liste[Article]
+    end
+
+    PL->>PL: Déduplicater par URL
+    PL->>PL: Exclure articles déjà stockés
+    PL->>N4J: store_articles_raw(articles)
+    N4J-->>PL: OK
+    PL->>PG: upsert_article (pour chaque article)
+
+    PL->>PG: Articles non analysés ?
+    PG-->>PL: Liste[Article sans SentimentScore]
+
+    loop Par batch de 5
+        PL->>LLM: analyze(article)
+        LLM->>LLM: Construire prompt (entreprises, secteurs)
+        LLM->>LLM: Appel LLM (max 3 tentatives)
+        LLM-->>PL: ArticleSentiment (structuré)
+        PL->>PG: upsert_sentiment, mentions, événements
+        PL->>N4J: store_sentiment_batch()
+    end
+
+    PL->>PL: Journaliser métriques (SQLite)
+    PL-->>AF: Succès / nb articles traités
+```
+
+### Diagramme de séquence — Gold Layer (transformation nightly)
+
+```{mermaid}
+sequenceDiagram
+    participant AF as Airflow
+    participant GP as gold/pipeline.py
+    participant EX as gold/extractors.py
+    participant FE as gold/features.py
+    participant PG as PostgreSQL
+
+    AF->>GP: Déclenchement (02:00 quotidien)
+    GP->>EX: load_articles()
+    EX->>PG: SELECT articles + sentiment (LEFT JOIN)
+    PG-->>EX: DataFrame articles enrichis
+    EX-->>GP: df_articles
+
+    GP->>EX: load_company_mentions()
+    PG-->>EX: DataFrame mentions
+    EX-->>GP: df_mentions
+
+    GP->>EX: load_stock_prices()
+    PG-->>EX: DataFrame OHLCV
+    EX-->>GP: df_prices
+
+    GP->>FE: map_entities(df_articles, df_mentions)
+    FE->>FE: Mapping par mentions DB + fallback tokenisation
+    FE-->>GP: df_mapped (article_url, ticker, date)
+
+    GP->>FE: enrich_articles(df_articles, df_mapped)
+    FE->>FE: Détection événements rule-based (M&A, earnings, management, legal)
+    FE->>FE: Sentiment lexical fallback
+    FE-->>GP: df_enriched
+
+    GP->>FE: build_features(df_enriched)
+    FE->>FE: Agrégations (3j, 7j) par ticker×date
+    FE->>FE: One-hot des 13 types d'événements LLM
+    FE-->>GP: df_features
+
+    GP->>FE: build_daily_signals(df_features, df_prices)
+    FE->>FE: JOIN sur (ticker, date)
+    FE->>FE: Calculer daily_return, next_day_return, direction
+    FE-->>GP: df_signals (~80 colonnes)
+
+    GP->>PG: TRUNCATE gold.daily_signals
+    GP->>PG: INSERT INTO gold.daily_signals
+    GP->>PG: Rafraîchir gold.company_dim
+    GP->>PG: Rafraîchir gold.sentiment_weekly / monthly
+    GP->>PG: Rafraîchir gold.event_facts
+    GP->>PG: Rafraîchir gold.commodity_daily
+    GP-->>AF: Succès / nb lignes insérées
+```
+
+### Diagramme d'activité — Analyse sémantique d'un article
+
+```{mermaid}
+flowchart TD
+    A([Début]) --> B[Récupérer article depuis la file]
+    B --> C{Déjà analysé ?}
+    C -->|Oui| Z([Fin - Skip])
+    C -->|Non| D[Construire prompt LLM\nentreprises + secteurs + taxonomie]
+    D --> E[Appel API LLM]
+    E --> F{Succès ?}
+    F -->|Non, tentative ≤ 3| G[Backoff exponentiel 5/10/20s]
+    G --> E
+    F -->|Non, tentative > 3| H[Journaliser échec\nmarquer article échoué]
+    H --> Z
+    F -->|Oui| I[Parser réponse JSON structurée]
+    I --> J[Normaliser sentiment\npositif / négatif / neutre]
+    J --> K[Calculer empreinte événement\nhash event_type+tickers+semaine_ISO]
+    K --> L[Upsert SentimentScore\nen PostgreSQL]
+    L --> M[Upsert mentions entreprises et secteurs]
+    M --> N[Upsert événement + bridge article-événement]
+    N --> O[Upsert personnes mentionnées]
+    O --> P[Stocker dans Neo4j]
+    P --> Q[Incrémenter compteur articles traités]
+    Q --> Z
+```
+
+## Modélisation Statique
+
+### Diagramme de classes (couche métier)
+
+```{mermaid}
+classDiagram
+    class Article {
+        +str url
+        +str title
+        +datetime published_at
+        +str full_text
+        +str language
+        +str feed_url
+    }
+
+    class ArticleSentiment {
+        +str article_url
+        +str sentiment
+        +float score
+        +float confidence
+        +str reasoning
+        +List~str~ mentioned_tickers
+        +List~str~ mentioned_sectors
+        +str event_type
+        +date event_date
+        +List~PersonMention~ mentioned_people
+        +str event_fingerprint
+        +normalize_sentiment()
+        +normalize_event_type()
+        +compute_fingerprint()
+    }
+
+    class PersonMention {
+        +str name
+        +str role
+        +str normalized_name
+    }
+
+    class Feed {
+        +str url
+        +str name
+        +str language
+        +bool enabled
+        +str scraper
+    }
+
+    class Company {
+        +str ticker
+        +str company_name
+        +str sector
+        +str ceo
+        +int founded
+        +str headquarters
+    }
+
+    class Event {
+        +str fingerprint
+        +str event_type
+        +date event_date
+        +datetime first_seen
+        +int article_count
+    }
+
+    class LLMArticleAnalyzer {
+        +str model
+        +str base_url
+        +int max_retries
+        +analyze(article: Article) ArticleSentiment
+        +build_prompt(article: Article) str
+    }
+
+    class PipelineLogger {
+        +str db_path
+        +str run_id
+        +start(pipeline_name: str)
+        +event(stage, message, level)
+        +metric(name, value)
+        +finish(status)
+    }
+
+    class GoldPipeline {
+        +run()
+        +map_entities()
+        +enrich_articles()
+        +build_features()
+        +build_daily_signals()
+        +build_company_dim()
+        +build_bi_aggregations()
+    }
+
+    Article "1" --> "1" ArticleSentiment : analysé par
+    Article "0..*" --> "0..*" Company : mentionne
+    Article "0..*" --> "0..*" Event : couvre
+    Article "0..*" --> "0..*" PersonMention : mentionne
+    ArticleSentiment "1" --> "0..*" PersonMention : contient
+    Feed "1" --> "0..*" Article : publie
+    Event "0..*" --> "0..*" Company : implique
+    LLMArticleAnalyzer --> ArticleSentiment : produit
+    GoldPipeline --> Article : consomme
+    GoldPipeline --> ArticleSentiment : consomme
+```
+
+### Diagramme de composants
+
+```{mermaid}
+graph LR
+
+    subgraph Pipelines["Pipelines (Python 3.12 + uv)"]
+        RSS_MOD["rss/<br/>(pipeline, fetcher, analyzer,<br/>models, neo4j_loader)"]
+        GOLD_MOD["gold/<br/>(pipeline, extractors,<br/>features, loader)"]
+        SCRAPER_MOD["scrapers/<br/>(bkam, lematin, ammc spiders)"]
+        AGENT_MOD["agents/agent.py<br/>(LangChain research)"]
+        DB_MOD["db/<br/>(db.py, pg_loader.py)"]
+        MON_MOD["monitoring/logger.py"]
+        BACKFILL["backfill/<br/>(cdx_harvester, ingest.py)"]
+    end
+
+    subgraph DATABASES["Bases de données"]
+        PG_DB[(PostgreSQL 16<br/>pfa_bvc)]
+        N4J_DB[(Neo4j)]
+        MINIO_S[(MinIO)]
+        SQLITE_DB[(SQLite<br/>monitoring)]
+    end
+
+    subgraph LLM["LLM"]
+        OLLAMA["Ollama<br/>LLaMA 3.1 8B"]
+        OPENROUTER["OpenRouter API<br/>(cloud fallback)"]
+    end
+
+    subgraph ORCH["Orchestration"]
+        AIRFLOW["Apache Airflow<br/>4 DAGs"]
+    end
+
+    subgraph PRESENTATION["Présentation"]
+        STREAMLIT["Streamlit<br/>Dashboard"]
+        JUPYTER["Jupyter<br/>Notebooks"]
+    end
+
+    RSS_MOD --> DB_MOD
+    GOLD_MOD --> DB_MOD
+    SCRAPER_MOD --> DB_MOD
+
+    DB_MOD --> PG_DB
+    DB_MOD --> N4J_DB
+
+    RSS_MOD --> MON_MOD
+    MON_MOD --> SQLITE_DB
+
+    SCRAPER_MOD --> MINIO_S
+
+    RSS_MOD -.-> OLLAMA
+    RSS_MOD -.-> OPENROUTER
+    AGENT_MOD -.-> OPENROUTER
+
+    BACKFILL --> PG_DB
+
+    AIRFLOW --> RSS_MOD
+    AIRFLOW --> SCRAPER_MOD
+    AIRFLOW --> GOLD_MOD
+
+    STREAMLIT --> PG_DB
+    JUPYTER --> PG_DB
+    JUPYTER --> N4J_DB
+```
+### Diagramme de déploiement
+
+```{mermaid}
+graph TB
+    subgraph "Hôte Docker (Machine de développement)"
+        subgraph "bvc_net (bridge réseau)"
+            C1["neo4j:7474/7687"]
+            C2["postgres:5432"]
+            C3["minio:9000/9001"]
+            C4["pgadmin:5050"]
+            C5["dashboard:8501"]
+            C6["airflow-webserver:8080"]
+            C7["airflow-scheduler"]
+        end
+    end
+
+    subgraph "Hôte Airflow (Machine dédiée)"
+        AF_WS["airflow-webserver:8080"]
+        AF_SCH["airflow-scheduler"]
+        AF_INIT["airflow-init"]
+        DAGS["DAGs\nrss_pipeline\nstock_prices\nbkam\ngold_layer"]
+    end
+
+    subgraph "Services Cloud"
+        OR["OpenRouter API\nhttps://openrouter.ai"]
+        TV["Tavily Search API"]
+        IA["Internet Archive CDX"]
+    end
+
+    C2 <--> C5
+    C1 <--> AF_SCH
+    C2 <--> AF_SCH
+    AF_SCH --> DAGS
+    DAGS -.->|API calls| OR
+    DAGS -.->|API calls| TV
+    DAGS -.->|HTTP| IA
+```
+
+## Modélisation du Schéma de Données
+
+### Schéma entité-relation (couche silver)
+
+```{mermaid}
+erDiagram
+    COMPANIES {
+        varchar ticker PK
+        varchar company_name
+        varchar sector
+        varchar ceo
+        int founded
+        varchar headquarters
+    }
+    FEEDS {
+        varchar url PK
+        varchar name
+        varchar language
+    }
+    ARTICLES {
+        varchar url PK
+        varchar title
+        timestamptz published_at
+        text full_text
+        varchar language
+        varchar feed_url FK
+    }
+    SENTIMENT_SCORES {
+        varchar article_url PK
+        varchar sentiment
+        float score
+        float confidence
+        text reasoning
+        varchar event_type
+        varchar event_fingerprint
+        timestamptz analyzed_at
+    }
+    EVENTS {
+        varchar fingerprint PK
+        varchar event_type
+        date event_date
+        timestamptz first_seen
+        int article_count
+    }
+    PEOPLE {
+        varchar normalized_name PK
+        varchar name
+        varchar role
+    }
+    STOCK_PRICES {
+        varchar ticker FK
+        date date
+        float close
+        float open
+        float high
+        float low
+        bigint volume
+        float change_pct
+    }
+
+    FEEDS ||--o{ ARTICLES : "PUBLISHED"
+    ARTICLES ||--o| SENTIMENT_SCORES : "HAS_SENTIMENT"
+    ARTICLES }o--o{ COMPANIES : "MENTIONS"
+    ARTICLES }o--o{ EVENTS : "COVERS"
+    ARTICLES }o--o{ PEOPLE : "MENTIONS_PERSON"
+    EVENTS }o--o{ COMPANIES : "INVOLVES"
+    COMPANIES ||--o{ STOCK_PRICES : "has prices"
+```
+
+## Conclusion
+
+Ce chapitre a présenté l'architecture logicielle du système selon une approche multi-couches
+(collecte, silver, gold, présentation), illustrée par des diagrammes de séquence pour les
+deux pipelines principaux, un diagramme d'activité pour l'analyse sémantique, des diagrammes
+de classes et de composants pour la structure statique, et un diagramme de déploiement
+pour la topologie d'exécution. Le schéma entité-relation formalise la couche silver de
+PostgreSQL.
+
+Cette conception rigoureuse constitue le plan directeur de l'implémentation décrite
+dans le chapitre suivant, qui détaille l'environnement de développement et les modules
+effectivement réalisés.

@@ -1,0 +1,33 @@
+# Conclusion de la Première Partie {.unnumbered}
+
+La première partie de ce rapport a posé les fondations conceptuelles, architecturales et
+techniques du système de veille financière développé dans le cadre de ce projet de fin
+d'études.
+
+Le premier chapitre a établi le contexte institutionnel du projet en présentant la Bourse
+des Valeurs de Casablanca et les défis liés à l'analyse de la presse économique marocaine.
+L'étude de l'existant a révélé un vide réel entre les solutions professionnelles onéreuses
+et inaccessibles aux acteurs locaux, et les approches académiques insuffisamment outillées.
+La solution proposée — un système de veille basé sur les grands modèles de langage avec
+architecture multi-couches — répond à ces limitations en offrant une couverture linguistique
+adaptée, une extraction sémantique riche et un coût d'exploitation maîtrisé.
+
+Le deuxième chapitre a formalisé les exigences du système en dix-neuf besoins fonctionnels
+et treize besoins non fonctionnels, identifié quatre acteurs et décrit dix cas d'utilisation
+clés. Cette spécification exhaustive a fourni le référentiel qui a guidé toutes les décisions
+d'implémentation ultérieures.
+
+Le troisième chapitre a traduit ces exigences en une architecture logicielle concrète,
+illustrée par une série de diagrammes UML complémentaires : diagrammes de séquence pour
+les flux principaux (pipeline RSS, couche gold), diagramme d'activité pour l'analyse
+sémantique, diagrammes de classes et de composants pour la structure statique, et diagramme
+de déploiement pour la topologie d'exécution.
+
+Le quatrième chapitre a décrit l'implémentation effective du système, en détaillant
+l'environnement matériel et logiciel, et en présentant chacun des neuf modules implémentés
+(rss, gold, scrapers, agents, monitoring, backfill, dashboard, DAGs, infrastructure).
+
+La seconde partie de ce rapport entre maintenant dans le détail du pipeline de données
+et de la démarche scientifique : collecte, prétraitement, ingénierie des features,
+modélisation prédictive, évaluation et backtesting financier, pour aboutir à la
+présentation du tableau de bord de supervision.

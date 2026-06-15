@@ -1,0 +1,43 @@
+# Résumé {.unnumbered}
+
+**Mots-clés :** veille financière, traitement automatique du langage naturel, analyse de sentiment,
+grands modèles de langage, extraction d'événements, ingénierie des données, Random Forest,
+backtesting, Bourse des Valeurs de Casablanca.
+
+---
+
+Le marché boursier marocain, représenté par la Bourse des Valeurs de Casablanca (BVC), réunit
+plus de soixante-seize sociétés cotées dont les performances sont étroitement liées à l'actualité
+économique et financière nationale et internationale. Dans ce contexte, la capacité à analyser en
+temps réel le sentiment de la presse financière et à identifier automatiquement les événements
+susceptibles d'affecter les cours constitue un avantage décisif pour les investisseurs et les
+analystes.
+
+Ce projet de fin d'études propose la conception et l'implémentation d'un système de veille
+financière intelligente fondé sur une architecture de pipeline de données multi-couches.
+Le système collecte en continu des articles issus de treize flux RSS de la presse économique
+marocaine et internationale, ainsi que de vastes archives historiques récupérées via l'Internet
+Archive CDX. Chaque article est soumis à un grand modèle de langage (LLM) déployé localement
+via Ollama, qui extrait le sentiment (positif, négatif, neutre), le score de confiance,
+les entités mentionnées (sociétés cotées, secteurs, personnes), le type d'événement parmi une
+taxonomie de treize catégories, et une empreinte de déduplication.
+
+Les données collectées sont stockées dans une couche dite « silver » en PostgreSQL et en Neo4j,
+puis transformées nightly en une couche « gold » analytique exposant environ quatre-vingts
+features par couple (titre boursier, jour). Ces features combinent des indicateurs de prix
+(OHLCV), des agrégats de sentiment à fenêtre glissante (3 et 7 jours), des indicateurs
+d'événements binaires et une représentation one-hot des types d'événements LLM.
+
+Un pipeline de modélisation supervisée entraîne un classificateur Random Forest prédit la
+direction du cours du lendemain et un régresseur prédit le rendement attendu.
+Un cadre de backtesting évalue les stratégies de trading long-only générées par ces signaux,
+en calculant les rendements cumulatifs, le drawdown maximal, le ratio de Sharpe
+et la heatmap mensuelle des performances.
+
+L'ensemble du système est orchestré par Apache Airflow avec quatre DAGs planifiés (horaire,
+journalier à 10h, 17h et 2h), et exposé via un tableau de bord Streamlit offrant quatre pages :
+vue d'ensemble, suivi des exécutions, flux en direct et cours boursiers.
+
+Les résultats démontrent la faisabilité technique d'un système de veille financière entièrement
+automatisé, économique (modèle local) et extensible, constituant une base solide pour des
+recherches futures en finance quantitative appliquée au marché marocain.

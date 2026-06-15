@@ -1,0 +1,209 @@
+# Chapitre 1 : Cadre du Projet
+
+## Introduction
+
+Ce premier chapitre pose les fondations conceptuelles du projet en définissant le contexte
+institutionnel dans lequel il s'inscrit, en articulant la problématique à laquelle il répond
+et en présentant les grandes lignes de la solution retenue. Une étude de l'existant permet
+d'identifier les approches actuelles, leurs forces et leurs limites, afin de justifier
+la nécessité et l'originalité de la démarche proposée.
+
+## Présentation de la Bourse des Valeurs de Casablanca
+
+La Bourse des Valeurs de Casablanca (BVC) est la principale place boursière du Maroc et l'une
+des plus importantes d'Afrique subsaharienne et du Maghreb. Fondée en 1929 sous le protectorat
+français et réorganisée à plusieurs reprises — notamment lors de la réforme de 1993 qui l'a
+transformée en société anonyme de droit privé —, la BVC joue un rôle central dans le financement
+de l'économie marocaine.
+
+Au moment de la réalisation de ce projet, la BVC réunit **soixante-seize sociétés cotées**
+réparties en dix-neuf secteurs d'activité, dont les banques, l'assurance, les télécommunications,
+les mines, l'immobilier, la distribution, les industries pharmaceutiques et les services publics.
+L'indice de référence, le **MASI (Moroccan All Shares Index)**, reflète la performance globale
+du marché et constitue le baromètre principal de la confiance des investisseurs envers l'économie
+marocaine.
+
+L'Autorité Marocaine du Marché des Capitaux (AMMC) assure la supervision et la régulation du marché,
+en imposant aux sociétés cotées des obligations de transparence et de publication régulière
+d'informations financières. Cette production réglementaire, combinée à la couverture médiatique
+intensive de la presse économique nationale, génère un flux continu d'informations dont l'analyse
+systématique représente un défi de taille.
+
+## Problématique
+
+### Asymétrie d'information et limites de l'analyse manuelle
+
+Le marché boursier est fondamentalement un mécanisme d'agrégation d'informations. Selon la théorie
+des marchés efficients proposée par Fama (1970), les cours intègrent à tout moment l'ensemble de
+l'information disponible. En pratique, cependant, la capacité à traiter l'information plus rapidement
+et plus exhaustivement que les autres acteurs confère un avantage concurrentiel significatif.
+
+Dans le contexte marocain, la presse économique produit quotidiennement des dizaines d'articles
+susceptibles d'affecter les cours : annonces de résultats financiers, opérations de croissance
+externe, changements de direction, décisions réglementaires, évolutions macroéconomiques. Un
+analyste humain ne peut physiquement couvrir l'ensemble de cette information en temps réel,
+ce qui crée une **asymétrie d'information structurelle** entre les acteurs disposant d'outils
+d'analyse automatisée et les autres.
+
+### Limites des approches lexicales traditionnelles
+
+Les approches traditionnelles d'analyse de sentiment financier reposent sur des lexiques
+spécialisés — le dictionnaire Loughran-McDonald pour l'anglais, ou des équivalents construits
+manuellement pour le français. Ces approches souffrent de plusieurs limitations importantes.
+D'une part, elles sont insensibles au contexte : le mot « perte » est systématiquement négatif
+même dans une phrase telle que « la perte de vitesse de l'inflation favorise la consommation ».
+D'autre part, elles ne capturent ni les structures syntaxiques complexes (négation, modalité,
+comparaison), ni les entités nommées, ni le type d'événement sous-jacent. Enfin, l'adaptation
+à une nouvelle langue ou à un domaine spécifique nécessite un effort de construction lexicale
+considérable.
+
+### Verrou technologique des solutions professionnelles
+
+Les solutions professionnelles d'analyse de sentiment financier — Bloomberg Terminal, Reuters Eikon,
+Refinitiv — offrent des capacités avancées mais à un coût prohibitif pour les acteurs de taille
+moyenne et les institutions académiques. Par ailleurs, elles ne couvrent pas nécessairement
+la presse marocaine de langue française et arabe, qui constitue la source d'information
+la plus pertinente pour le marché local.
+
+Cette conjonction de facteurs — volume d'information croissant, limites des approches lexicales,
+inaccessibilité des solutions commerciales — crée le besoin d'une **solution ouverte, économique
+et adaptée au contexte marocain** que ce projet vise à combler.
+
+## Étude de l'Existant
+
+### Outils professionnels d'analyse de sentiment
+
+**Bloomberg Terminal** propose depuis plusieurs années un service d'analyse de sentiment basé
+sur le traitement automatique des flux d'actualités. Son module Bloomberg Intelligence analyse
+des millions d'articles par jour et produit des scores de sentiment par titre boursier.
+L'avantage principal est la couverture mondiale et la qualité des données. L'inconvénient majeur
+est son coût d'abonnement annuel, de l'ordre de 20 000 à 30 000 dollars par utilisateur,
+qui le rend inaccessible à la grande majorité des acteurs.
+
+**Reuters Eikon / Refinitiv** propose un service similaire via son module Reuters News Analytics,
+qui enrichit les flux d'actualités avec des métadonnées de sentiment, de pertinence et d'entités
+nommées. La granularité temporelle est élevée et les données peuvent être intégrées directement
+dans des stratégies algorithmiques. Comme Bloomberg, la barrière financière reste rédhibitoire
+pour une utilisation académique ou par des acteurs locaux.
+
+**FinBERT** est un modèle pré-entraîné open-source basé sur l'architecture BERT, fine-tuné
+sur des corpus financiers en anglais. Il constitue l'état de l'art pour l'analyse de sentiment
+financier en anglais académique. Ses limites sont l'absence de support natif pour le français
+et l'arabe, l'incapacité à extraire des entités nommées ou des types d'événements, et la
+nécessité d'un investissement conséquent pour l'adaptation à un domaine spécifique.
+
+### Travaux académiques sur le NLP financier
+
+De nombreux travaux académiques ont exploré l'exploitation de la presse financière pour la
+prédiction des cours boursiers. Tetlock (2007) a démontré l'existence d'une corrélation
+entre la tonalité des articles du Wall Street Journal et les rendements futurs du marché américain.
+Bollen et al. (2011) ont utilisé l'analyse du sentiment Twitter pour prédire les variations
+du Dow Jones Industrial Average avec une précision remarquable.
+
+Dans le contexte africain et maghrébin, les travaux sur la finance computationnelle restent
+rares. L'absence de corpus annotés en darija ou en français marocain financier, la faible
+taille des marchés et le manque de données historiques structurées constituent des obstacles
+récurrents identifiés dans la littérature.
+
+### Solutions open-source disponibles
+
+Des frameworks comme **Hugging Face Transformers**, **LangChain** et **LlamaIndex** ont
+démocratisé l'accès aux grands modèles de langage. L'émergence des LLM locaux via **Ollama**
+(LLaMA, Mistral, Qwen) permet désormais d'exécuter des modèles de qualité comparable à des
+API commerciales sans frais récurrents et sans transmission de données à des serveurs tiers.
+Ces développements récents constituent le socle technologique sur lequel ce projet s'appuie.
+
+## Critique de l'Existant
+
+L'analyse de l'existant révèle plusieurs lacunes auxquelles la solution proposée entend
+répondre.
+
+**Sur le plan de l'accessibilité économique**, les solutions professionnelles restent hors
+de portée des acteurs locaux. Aucune solution open-source n'est aujourd'hui adaptée au
+marché marocain en termes de couverture des sources, de support linguistique et d'adaptation
+sectorielle.
+
+**Sur le plan fonctionnel**, la grande majorité des outils existants se limitent à un score
+de sentiment global par article, sans extraction de l'entité concernée, du type d'événement,
+ni de la date de l'événement. Cette granularité insuffisante limite considérablement
+l'exploitabilité des résultats pour la construction de signaux boursiers.
+
+**Sur le plan architectural**, les solutions académiques se présentent souvent comme des
+scripts de recherche peu maintenables, sans infrastructure de production, sans orchestration,
+sans mécanisme de reprise sur erreur ni tableau de bord de supervision.
+
+**Sur le plan de la couverture temporelle**, la quasi-totalité des travaux existants
+se concentrent sur des périodes récentes avec des données déjà disponibles. La construction
+d'une archive historique couvrant plusieurs années via des mécanismes de backfill est rarement
+abordée dans la littérature.
+
+## Solution Proposée
+
+La solution développée dans ce projet est un **système de veille financière intelligente**
+architecturé en trois couches :
+
+**La couche de collecte** regroupe trois mécanismes complémentaires : un pipeline RSS
+qui collecte en continu les articles des treize principales sources d'actualités économiques
+marocaines et internationales ; un moteur de backfill qui reconstruit l'archive historique
+en interrogeant l'Internet Archive CDX pour récupérer des articles datant de plusieurs années ;
+et des spiders Scrapy dédiés aux cours boursiers quotidiens de LeMatin et aux taux de change
+de la banque centrale (BKAM).
+
+**La couche analytique (silver)** stocke l'ensemble des données brutes et enrichies dans
+deux bases de données complémentaires : PostgreSQL pour les requêtes analytiques relationnelles
+et Neo4j pour la navigation graphique entre entités (sociétés, personnes, événements, articles).
+L'analyse de sentiment est assurée par un LLM local (LLaMA 3.1 8B via Ollama ou OpenRouter),
+qui extrait sept dimensions par article : sentiment, score, confiance, raisonnement, entités
+mentionnées, type d'événement et empreinte de déduplication.
+
+**La couche analytique (gold)** transforme nightly les données silver en tables analytiques
+exposant environ quatre-vingts features par couple (titre boursier, date). Ces features intègrent
+les indicateurs de prix, les agrégats de sentiment à fenêtres glissantes et les encodages
+one-hot des types d'événements. Cette couche est directement exploitable par des algorithmes
+d'apprentissage supervisé.
+
+L'originalité de la solution réside dans la combinaison de plusieurs éléments rarement
+associés dans les travaux existants : la couverture de la presse marocaine multilingue
+(français, arabe, anglais) ; l'utilisation d'un LLM local pour l'extraction structurée
+d'informations financières avec une taxonomie d'événements spécialisée ; la dualité
+de stockage relationnel/graphe ; et un cadre de backtesting intégré pour la validation
+des signaux produits.
+
+## Choix du Modèle de Développement
+
+Ce projet a été réalisé selon une approche **agile et itérative**, organisée en sprints
+fonctionnels successifs. Ce choix se justifie par plusieurs facteurs propres au contexte
+du projet.
+
+**L'incertitude des exigences initiales** est inhérente à tout projet de recherche appliquée.
+La définition précise des features à construire, du modèle de données graphe et de la
+taxonomie d'événements a évolué au fil des itérations, en fonction des données effectivement
+disponibles et des résultats observés. Un cycle en cascade aurait été inadapté à cette
+évolution organique.
+
+**La nature modulaire de l'architecture** a favorisé un développement incrémental :
+chaque pipeline (RSS, BKAM, stock prices, gold layer) a été conçu, testé et mis en production
+indépendamment, avant d'être intégré dans le schéma orchestré par Airflow. Cette modularité
+a permis de livrer de la valeur à chaque étape sans attendre l'achèvement du système complet.
+
+**La validation par les données** a imposé des itérations fréquentes. L'analyse exploratoire
+des données collectées (Notebooks Jupyter) a régulièrement conduit à revoir les choix de
+modélisation : enrichissement de la taxonomie d'événements, ajout de mécanismes de
+déduplication par empreinte, révision des fenêtres temporelles des features.
+
+En pratique, le développement a suivi quatre grandes phases itératives : (1) infrastructure
+de collecte et de stockage, (2) pipeline d'analyse sémantique et d'enrichissement, (3) couche
+gold et feature engineering, (4) modélisation prédictive, évaluation et backtesting.
+
+## Conclusion
+
+Ce premier chapitre a permis de situer le projet dans son contexte économique et technologique,
+d'identifier les limites des solutions existantes et de présenter les grandes lignes de
+la réponse apportée. La problématique centrale — comment transformer automatiquement la
+presse financière marocaine en signaux boursiers exploitables — trouve dans la combinaison
+des grands modèles de langage, de l'ingénierie des données et de l'apprentissage supervisé
+une réponse à la fois économique, extensible et scientifiquement rigoureuse.
+
+Le chapitre suivant précise les besoins fonctionnels et non fonctionnels du système,
+et formalise ces exigences sous la forme de cas d'utilisation structurés et de diagrammes
+UML.

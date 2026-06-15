@@ -1,0 +1,134 @@
+# Chapitre 1 : Collecte des Données
+
+## Introduction
+
+La qualité d'un système d'intelligence artificielle appliqué à la finance est indissociable
+de la qualité et de la richesse des données sur lesquelles il repose. Ce premier chapitre
+de la partie data science décrit en détail les différentes sources de données mobilisées,
+les mécanismes de collecte implémentés et les caractéristiques statistiques du corpus
+constitué. Trois familles de données ont été collectées : les articles de presse financière,
+les données boursières (cours OHLCV et taux de change) et les prix des matières premières.
+
+## Sources de Données
+
+### Presse financière marocaine et internationale
+
+La presse économique constitue la source d'information centrale de ce projet. Treize flux RSS
+ont été configurés, couvrant les principales publications marocaines spécialisées ainsi que
+des sources internationales de référence.
+
+| Source | URL du flux | Langue | Scraper full-text |
+|--------|------------|--------|------------------|
+| Médias24 Économie | medias24.com/rss | fr | Non |
+| L'Économiste | leconomiste.com/rss | fr | Non |
+| Actu-Maroc | actu-maroc.ma/rss | fr | Non |
+| La Vie Éco | lavieeco.com/rss | fr | Non |
+| Le Reporter | lereporter.ma/rss | fr | Non |
+| LeMatin Économie | lematin.ma/rss | fr | **Oui** (`.article-desc`) |
+| Challenge Maroc | challenge.ma/rss | fr | **Oui** (`.entry-content`) |
+| Hespress Économie | hespress.com/rss | fr | Non |
+| TelQuel Économie | telquel.ma/rss | fr | Non |
+| Hespress Arabe | hespress.com/rss/ar | ar | Non |
+| Reuters Business | reuters.com/rss/business | en | Non |
+| Finances News | financenews.ma/rss | fr | Non |
+| Bloomberg ME | bloomberg.com/rss | en | Désactivé |
+
+La diversité linguistique (français, arabe, anglais) est une caractéristique importante
+du corpus : elle reflète la réalité de l'écosystème médiatique marocain et exige un modèle
+d'analyse capable de traiter des textes multilingues, ce que permettent les LLM de dernière
+génération.
+
+### Archives historiques (Internet Archive CDX)
+
+Afin de constituer une base d'entraînement suffisamment large, un module de backfill
+exploite l'API CDX d'Internet Archive pour récupérer les versions archivées des articles
+publiés par huit domaines de presse économique marocaine. Les domaines couverts incluent
+LeMatin, L'Économiste, La Vie Éco, Médias24, Challenge, Hespress FR, Les Éco et Finances News.
+
+Pour chaque domaine, un fichier de configuration Python spécifie le pattern d'URL à indexer
+et le sélecteur CSS permettant d'extraire le texte principal de l'article archivé. L'indexation
+produit un fichier Parquet (`index.parquet`) contenant l'URL, la date d'archivage et le checksum.
+Le téléchargement produit des fichiers HTML compressés (`.html.gz`) organisés par domaine.
+
+### Données boursières
+
+**Cours OHLCV historiques.** Un ensemble de soixante-seize fichiers CSV couvrant l'historique
+des cours boursiers de l'ensemble des sociétés cotées sur la BVC a été collecté comme point
+de départ. Ces fichiers ont été nettoyés et homogénéisés (gestion des séparateurs décimaux,
+des formats de dates et des valeurs manquantes).
+
+**Cours journaliers.** Un spider Scrapy (`lematin_spider.py`) collecte quotidiennement
+les cours de clôture, d'ouverture, les plus hauts/bas et les volumes de transaction depuis
+LeMatin Bourse, et les stocke dans la table `stock_prices` de PostgreSQL.
+
+**Taux de change BKAM.** Un second spider Scrapy collecte quotidiennement les taux de change
+officiels publiés par Bank Al-Maghrib pour une vingtaine de devises, stockés dans la table
+`bkam_rates`. Ces données permettent d'analyser l'impact des fluctuations monétaires sur
+les sociétés à fort contenu en devises étrangères (exportateurs, importateurs d'énergie).
+
+### Matières premières
+
+Le module `commodity_ingestion.py` collecte via Yahoo Finance les prix quotidiens des
+principales matières premières pertinentes pour l'économie marocaine, notamment le cours
+de l'or (XAU), du pétrole Brent (BZ=F), des phosphates (OCP étant le premier exportateur
+mondial) et d'autres actifs de référence. Ces données alimentent la table `commodities`
+et la table gold `commodity_daily`.
+
+## Pipeline de Collecte RSS
+
+### Architecture du collecteur
+
+Le collecteur RSS est implémenté dans `rss/rss_fetcher.py` et fonctionne selon les étapes
+suivantes. Lors de chaque exécution (toutes les heures), il charge la liste des flux depuis
+`config/rss_feeds.yaml`, interroge chaque flux via `feedparser`, filtre les entrées dont
+la date de publication est antérieure à la fenêtre temporelle (`lookback_days = 7`),
+et déduplique les articles par URL.
+
+Pour les sources disposant d'un scraper enregistré, une requête HTTP est émise vers la
+page article avec un timeout de 15 secondes, et le texte est extrait via BeautifulSoup4
+selon le sélecteur CSS défini. Un en-tête `User-Agent: BVC-Research-Bot/1.0` est utilisé
+pour respecter les conventions d'identification des robots.
+
+### Résilience et reprise
+
+La résistance aux pannes est assurée à deux niveaux. Au niveau du flux RSS, les exceptions
+levées par `feedparser` (timeout, flux malformé) sont capturées et journalisées sans
+interrompre le traitement des autres flux. Au niveau du pipeline global, la liste des URLs
+déjà présentes en base est chargée en mémoire au démarrage, ce qui garantit qu'un article
+déjà stocké ne sera jamais soumis une seconde fois à l'analyse LLM, même si le pipeline
+est relancé plusieurs fois.
+
+## Statistiques du Corpus
+
+La figure @fig-sources-distribution illustre la répartition des articles collectés
+par source de données.
+
+![Répartition des articles par source](figures/01_sources_distribution.png){#fig-sources-distribution}
+
+Cette figure montre que LeMatin et Médias24 contribuent au plus grand nombre d'articles,
+reflétant à la fois leur productivité éditoriale élevée et la présence d'un scraper
+full-text qui enrichit les données. L'Économiste, malgré sa réputation de référence
+pour la presse économique marocaine, dispose d'un flux RSS moins fourni.
+
+La figure @fig-articles-timeline présente l'évolution temporelle du volume de collecte,
+illustrant l'effet du module de backfill CDX qui a permis de reconstituer un historique
+de plusieurs années.
+
+![Volume d'articles collectés par mois](figures/02_articles_timeline.png){#fig-articles-timeline}
+
+On observe une forte accélération du corpus au cours de la phase de backfill, suivie d'un
+rythme de collecte stable et continu correspondant au mode de fonctionnement du pipeline RSS
+en production. La densité temporelle est plus élevée pour les périodes récentes, ce qui
+est cohérent avec la couverture croissante de la presse économique marocaine en ligne.
+
+## Conclusion
+
+Ce chapitre a présenté les quatre familles de sources de données mobilisées dans ce projet
+et les mécanismes de collecte associés. La combinaison de la collecte en temps réel via RSS
+et du backfill historique via CDX a permis de constituer un corpus de presse financière
+marocaine couvrant plusieurs années, complété par des données boursières et de matières
+premières. La richesse et la diversité de ce corpus constituent le fondement indispensable
+des analyses présentées dans les chapitres suivants.
+
+Le chapitre suivant décrit les opérations de prétraitement appliquées à ces données brutes
+pour les rendre exploitables par la chaîne d'analyse.

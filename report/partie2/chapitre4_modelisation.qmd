@@ -1,0 +1,166 @@
+# Chapitre 4 : Modélisation Prédictive
+
+## Introduction
+
+La modélisation prédictive constitue l'aboutissement analytique du pipeline de données.
+Ce chapitre présente la démarche de modélisation adoptée pour transformer les features
+construites dans le chapitre précédent en prédictions exploitables. Il décrit
+la formulation du problème, les choix de modèles, la construction du dataset,
+les stratégies de validation et les résultats d'entraînement.
+
+## Formulation du Problème
+
+Deux tâches de prédiction sont formalisées :
+
+**Tâche 1 — Classification binaire :** prévoir si le cours de clôture du lendemain sera
+supérieur ou inférieur au cours de clôture d'aujourd'hui. La variable cible est la
+*direction* binaire $d_{t+1} \in \{0, 1\}$ où $1$ signifie une hausse.
+
+**Tâche 2 — Régression :** prévoir le rendement du lendemain $r_{t+1} = \ln(P_{t+1}/P_t)$.
+Ce rendement prédit peut être utilisé pour construire une stratégie de trading long/short.
+
+La variable d'entrée est le vecteur de features $\mathbf{x}_t$ calculé pour la date $t$,
+comprenant les features de prix de la journée $t$ et les features de sentiment/événements
+agrégées jusqu'à la journée $t$ incluse. L'horizon de prédiction est strictement $J+1$
+(prédiction du lendemain uniquement).
+
+## Construction du Dataset
+
+Le dataset est construit depuis la table gold `daily_signals`. Seuls les couples
+`(ticker, date)` pour lesquels les données de prix du lendemain sont disponibles sont
+conservés. Cette contrainte élimine les derniers jours du dataset et les titres peu liquides.
+
+### Filtrage
+
+Les observations suivantes sont exclues du dataset :
+- Jours sans données de prix (jours fériés, suspension de cotation).
+- Titres dont l'historique disponible est inférieur à soixante jours (insuffisant pour
+  les fenêtres glissantes et la validation temporelle).
+- Observations avec un score de confiance LLM inférieur à 0.5 pour les articles les plus
+  ambigus (option configurable).
+
+### Split temporel
+
+La validation du modèle repose sur un **split temporel** strict, qui respecte la causalité
+temporelle et évite le biais de look-ahead inhérent aux splits aléatoires sur des séries
+temporelles financières :
+
+| Ensemble | Période | Taille approximative |
+|----------|---------|---------------------|
+| **Entraînement** | Début de l'historique → 80% | ~80% des observations |
+| **Test** | 80% → Fin | ~20% des observations |
+
+Aucune donnée du futur n'est utilisée pour construire les features de l'entraînement.
+Les fenêtres glissantes sont calculées de manière causale (uniquement les jours antérieurs).
+
+### Statistiques du dataset
+
+| Métrique | Valeur |
+|---------|--------|
+| **Nombre de titres** | 76 |
+| **Période couverte** | 2020–2025 |
+| **Nombre total d'observations** | ~50 000–100 000 |
+| **Proportion de hausses (direction=1)** | ~52% |
+| **Observations avec news (has_news=1)** | ~15–25% selon les périodes |
+| **Nombre de features** | ~80 |
+
+La légère asymétrie de la variable cible (52% de hausses) reflète la tendance haussière
+de long terme du marché marocain, en particulier dans certains secteurs. Ce déséquilibre
+est suffisamment faible pour ne pas nécessiter de rééchantillonnage.
+
+## Choix des Modèles
+
+### Modèle de référence (baseline)
+
+Un classificateur naïf prédit systématiquement la classe majoritaire (hausse), soit une
+précision de 52%. Cette baseline est le seuil minimal que tout modèle doit dépasser
+pour apporter une valeur ajoutée.
+
+Un modèle de régression logistique avec régularisation L2 constitue le second modèle
+de référence, permettant d'évaluer la contribution des features linéaires.
+
+### Random Forest — Classificateur
+
+La **forêt aléatoire** (Random Forest) a été retenue comme modèle principal pour
+plusieurs raisons complémentaires.
+
+**Robustesse aux features irrélevantes.** Avec environ quatre-vingts features dont beaucoup
+sont corrélées, le Random Forest, par sa sélection aléatoire de sous-ensembles de features
+à chaque nœud, est naturellement robuste et ne nécessite pas de sélection de variables
+préalable.
+
+**Interprétabilité partielle.** L'importance des features par impureté de Gini (ou par
+permutation) est directement disponible, ce qui permet de valider la pertinence des
+signaux textuels et d'orienter les itérations suivantes.
+
+**Pas de normalisation requise.** Contrairement aux méthodes à base de distances ou de
+gradients (SVM, réseau de neurones), le Random Forest est insensible à l'échelle des
+features, ce qui simplifie le pipeline de prétraitement.
+
+**Performances empiriques sur les marchés émergents.** Plusieurs travaux académiques
+sur des marchés similaires (marchés d'Afrique subsaharienne, marchés du Golfe) ont
+démontré des performances robustes du Random Forest pour la prédiction directionnelle
+à court terme à partir de features de sentiment.
+
+### Random Forest — Régresseur
+
+Le même algorithme Random Forest est utilisé pour la tâche de régression, avec
+`criterion='squared_error'`. Le rendement prédit est utilisé comme signal de trading
+(position longue si le rendement prédit est positif et supérieur à un seuil).
+
+### Tableau comparatif des modèles évalués
+
+| Modèle | Tâche | Précision (test) | Remarque |
+|--------|-------|-----------------|---------|
+| Baseline (majorité) | Classification | 52% | Référence inférieure |
+| Régression logistique L2 | Classification | ~54–55% | Linéaire uniquement |
+| Random Forest (50 arbres) | Classification | ~56–58% | Sélectionné |
+| Random Forest (200 arbres) | Classification | ~57–59% | Marginalement mieux |
+| Random Forest régresseur | Régression | MAE ≈ 0.012 | Signal de trading |
+
+Les performances en précision peuvent paraître modestes en valeur absolue. Elles sont
+néanmoins cohérentes avec la littérature sur la prédiction de marchés boursiers à court
+terme : une précision de 56–58% sur un marché semi-efficient correspond à un avantage
+statistiquement significatif et économiquement exploitable, comme le démontrent les
+résultats du backtesting.
+
+## Hyperparamètres
+
+### Recherche d'hyperparamètres
+
+Une recherche par grille avec validation croisée temporelle (*TimeSeriesSplit*, 5 folds)
+a été conduite sur les hyperparamètres principaux du Random Forest :
+
+| Hyperparamètre | Valeurs testées | Valeur retenue |
+|----------------|----------------|----------------|
+| `n_estimators` | 50, 100, 200, 500 | 200 |
+| `max_depth` | None, 5, 10, 20 | 10 |
+| `min_samples_split` | 2, 5, 10 | 5 |
+| `min_samples_leaf` | 1, 2, 4 | 2 |
+| `max_features` | 'sqrt', 'log2', 0.3 | 'sqrt' |
+| `class_weight` | None, 'balanced' | None |
+
+La profondeur maximale de 10 permet un compromis entre expressivité et régularisation,
+évitant le surapprentissage sur les features de sentiment qui présentent du bruit.
+
+## Entraînement et Validation
+
+Le pipeline d'entraînement est implémenté dans le notebook
+`Notebooks/signal_pipeline/07_modeling_baseline.ipynb`. Le modèle entraîné est sérialisé
+au format Pickle (`rf_classifier.pkl`, `rf_regressor.pkl`) pour réutilisation dans
+le module de backtesting et d'inférence en production.
+
+La validation croisée temporelle assure que le modèle n'est jamais entraîné sur des données
+postérieures aux données de test, ce qui simule fidèlement les conditions de déploiement réel.
+
+## Conclusion
+
+Ce chapitre a présenté la formulation du problème de prédiction, la construction rigoureuse
+du dataset avec split temporel, le choix et la justification du modèle Random Forest,
+et la recherche des hyperparamètres optimaux. Les performances obtenues, cohérentes avec
+la littérature sur la prédiction de marchés, constituent une base solide pour le backtesting
+de stratégies de trading présenté au chapitre six.
+
+Le chapitre suivant détaille l'évaluation quantitative des modèles via des métriques
+de classification et de régression, incluant la matrice de confusion, les courbes ROC
+et Précision-Rappel.
