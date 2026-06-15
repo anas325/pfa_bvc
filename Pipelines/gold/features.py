@@ -2,6 +2,7 @@ import re
 
 import numpy as np
 import pandas as pd
+from sqlalchemy.engine import Engine
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -368,6 +369,41 @@ def build_bi_aggregations(
     weekly = _resample("W-MON", "week_start")
     monthly = _resample("MS", "month_start")
     return weekly, monthly
+
+
+def build_commodity_features(engine: Engine) -> pd.DataFrame:
+    """
+    Reads public.commodities and computes rolling return/price windows
+    so commodity context can be joined alongside gold.daily_signals.
+    """
+    df = pd.read_sql(
+        "SELECT asset_key, date, name, category, close FROM commodities ORDER BY asset_key, date",
+        engine,
+        parse_dates=["date"],
+    )
+    if df.empty:
+        return df
+
+    df = df.sort_values(["asset_key", "date"])
+    df["daily_return"] = df.groupby("asset_key")["close"].transform("pct_change")
+
+    for window, suffix in [(3, "r3d"), (7, "r7d")]:
+        df[f"close_{suffix}"] = (
+            df.groupby("asset_key")["close"]
+            .transform(lambda x: x.rolling(window, min_periods=1).mean())
+        )
+        df[f"return_{suffix}"] = (
+            df.groupby("asset_key")["daily_return"]
+            .transform(lambda x: x.rolling(window, min_periods=1).mean())
+        )
+
+    df["volatility_r7d"] = (
+        df.groupby("asset_key")["daily_return"]
+        .transform(lambda x: x.rolling(7, min_periods=1).std())
+    )
+
+    return df[["asset_key", "date", "name", "category", "close", "daily_return",
+               "close_r3d", "close_r7d", "return_r3d", "return_r7d", "volatility_r7d"]]
 
 
 def build_event_tables(

@@ -138,103 +138,14 @@ CREATE TABLE IF NOT EXISTS bkam_rates (
 );
 
 -- ---------------------------------------------------------------------------
--- Gold layer — analytics-ready tables (managed by Pipelines/gold/loader.py)
+-- Gold schema — analytics-ready tables (managed by Pipelines/gold/loader.py)
 -- Full refresh on every DAG run; do not modify manually.
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS gold_daily_signals (
-    ticker                              TEXT        NOT NULL,
-    date                                DATE        NOT NULL,
-    close                               NUMERIC,
-    open                                NUMERIC,
-    high                                NUMERIC,
-    low                                 NUMERIC,
-    volume                              NUMERIC,
-    change_pct                          NUMERIC,
-    daily_return                        NUMERIC,
-    next_day_return                     NUMERIC,
-    direction                           SMALLINT,
-    has_news                            BOOLEAN     NOT NULL DEFAULT FALSE,
-    -- base sentiment/event features (13)
-    news_count                          SMALLINT,
-    avg_sentiment                       NUMERIC(8,5),
-    std_sentiment                       NUMERIC(8,5),
-    positive_count                      SMALLINT,
-    negative_count                      SMALLINT,
-    event_ma                            SMALLINT,
-    event_earnings                      SMALLINT,
-    event_management                    SMALLINT,
-    event_legal                         SMALLINT,
-    negated_count                       SMALLINT,
-    speculative_count                   SMALLINT,
-    positive_ratio                      NUMERIC(8,5),
-    negative_ratio                      NUMERIC(8,5),
-    -- rolling 3-day (9)
-    news_count_r3d                      NUMERIC(8,4),
-    avg_sentiment_r3d                   NUMERIC(8,5),
-    std_sentiment_r3d                   NUMERIC(8,5),
-    positive_ratio_r3d                  NUMERIC(8,5),
-    negative_ratio_r3d                  NUMERIC(8,5),
-    event_ma_r3d                        NUMERIC(8,4),
-    event_earnings_r3d                  NUMERIC(8,4),
-    event_management_r3d                NUMERIC(8,4),
-    event_legal_r3d                     NUMERIC(8,4),
-    -- rolling 7-day (9)
-    news_count_r7d                      NUMERIC(8,4),
-    avg_sentiment_r7d                   NUMERIC(8,5),
-    std_sentiment_r7d                   NUMERIC(8,5),
-    positive_ratio_r7d                  NUMERIC(8,5),
-    negative_ratio_r7d                  NUMERIC(8,5),
-    event_ma_r7d                        NUMERIC(8,4),
-    event_earnings_r7d                  NUMERIC(8,4),
-    event_management_r7d                NUMERIC(8,4),
-    event_legal_r7d                     NUMERIC(8,4),
-    -- LLM event types (13)
-    llm_evt_capital_operation           SMALLINT,
-    llm_evt_debt_issuance               SMALLINT,
-    llm_evt_dividend_announcement       SMALLINT,
-    llm_evt_earnings_release            SMALLINT,
-    llm_evt_economic_indicator          SMALLINT,
-    llm_evt_ipo_listing                 SMALLINT,
-    llm_evt_leadership_change           SMALLINT,
-    llm_evt_ma_deal                     SMALLINT,
-    llm_evt_market_data                 SMALLINT,
-    llm_evt_other                       SMALLINT,
-    llm_evt_project_contract            SMALLINT,
-    llm_evt_regulatory_action           SMALLINT,
-    llm_evt_strategic_plan              SMALLINT,
-    -- LLM event rolling 3-day (13)
-    llm_evt_capital_operation_r3d       NUMERIC(8,4),
-    llm_evt_debt_issuance_r3d           NUMERIC(8,4),
-    llm_evt_dividend_announcement_r3d   NUMERIC(8,4),
-    llm_evt_earnings_release_r3d        NUMERIC(8,4),
-    llm_evt_economic_indicator_r3d      NUMERIC(8,4),
-    llm_evt_ipo_listing_r3d             NUMERIC(8,4),
-    llm_evt_leadership_change_r3d       NUMERIC(8,4),
-    llm_evt_ma_deal_r3d                 NUMERIC(8,4),
-    llm_evt_market_data_r3d             NUMERIC(8,4),
-    llm_evt_other_r3d                   NUMERIC(8,4),
-    llm_evt_project_contract_r3d        NUMERIC(8,4),
-    llm_evt_regulatory_action_r3d       NUMERIC(8,4),
-    llm_evt_strategic_plan_r3d          NUMERIC(8,4),
-    -- LLM event rolling 7-day (13)
-    llm_evt_capital_operation_r7d       NUMERIC(8,4),
-    llm_evt_debt_issuance_r7d           NUMERIC(8,4),
-    llm_evt_dividend_announcement_r7d   NUMERIC(8,4),
-    llm_evt_earnings_release_r7d        NUMERIC(8,4),
-    llm_evt_economic_indicator_r7d      NUMERIC(8,4),
-    llm_evt_ipo_listing_r7d             NUMERIC(8,4),
-    llm_evt_leadership_change_r7d       NUMERIC(8,4),
-    llm_evt_ma_deal_r7d                 NUMERIC(8,4),
-    llm_evt_market_data_r7d             NUMERIC(8,4),
-    llm_evt_other_r7d                   NUMERIC(8,4),
-    llm_evt_project_contract_r7d        NUMERIC(8,4),
-    llm_evt_regulatory_action_r7d       NUMERIC(8,4),
-    llm_evt_strategic_plan_r7d          NUMERIC(8,4),
-    PRIMARY KEY (ticker, date)
-);
+CREATE SCHEMA IF NOT EXISTS gold;
 
-CREATE TABLE IF NOT EXISTS gold_company_dim (
+-- Parents first (no FKs)
+CREATE TABLE IF NOT EXISTS gold.company_dim (
     ticker                  TEXT        PRIMARY KEY,
     company_name            TEXT,
     sector                  TEXT,
@@ -250,7 +161,7 @@ CREATE TABLE IF NOT EXISTS gold_company_dim (
     last_article_date       DATE
 );
 
-CREATE TABLE IF NOT EXISTS gold_event_facts (
+CREATE TABLE IF NOT EXISTS gold.event_facts (
     fingerprint     TEXT        PRIMARY KEY,
     event_type      TEXT,
     event_date      DATE,
@@ -258,13 +169,109 @@ CREATE TABLE IF NOT EXISTS gold_event_facts (
     article_count   INT         NOT NULL DEFAULT 1
 );
 
-CREATE TABLE IF NOT EXISTS gold_event_company_bridge (
+-- Children (reference parents via FK)
+CREATE TABLE IF NOT EXISTS gold.event_company_bridge (
     fingerprint     TEXT        NOT NULL,
     ticker          TEXT        NOT NULL,
-    PRIMARY KEY (fingerprint, ticker)
+    PRIMARY KEY (fingerprint, ticker),
+    CONSTRAINT fk_ecb_event    FOREIGN KEY (fingerprint) REFERENCES gold.event_facts(fingerprint),
+    CONSTRAINT fk_ecb_company  FOREIGN KEY (ticker)      REFERENCES gold.company_dim(ticker)
 );
 
-CREATE TABLE IF NOT EXISTS gold_sentiment_weekly (
+CREATE TABLE IF NOT EXISTS gold.daily_signals (
+    ticker                              TEXT        NOT NULL,
+    date                                DATE        NOT NULL,
+    close                               NUMERIC,
+    open                                NUMERIC,
+    high                                NUMERIC,
+    low                                 NUMERIC,
+    volume                              NUMERIC,
+    change_pct                          NUMERIC,
+    daily_return                        NUMERIC,
+    next_day_return                     NUMERIC,
+    direction                           SMALLINT,
+    has_news                            BOOLEAN     NOT NULL DEFAULT FALSE,
+    -- base sentiment/event features
+    news_count                          SMALLINT,
+    avg_sentiment                       NUMERIC(8,5),
+    std_sentiment                       NUMERIC(8,5),
+    positive_count                      SMALLINT,
+    negative_count                      SMALLINT,
+    event_ma                            SMALLINT,
+    event_earnings                      SMALLINT,
+    event_management                    SMALLINT,
+    event_legal                         SMALLINT,
+    negated_count                       SMALLINT,
+    speculative_count                   SMALLINT,
+    positive_ratio                      NUMERIC(8,5),
+    negative_ratio                      NUMERIC(8,5),
+    -- rolling 3-day
+    news_count_r3d                      NUMERIC(8,4),
+    avg_sentiment_r3d                   NUMERIC(8,5),
+    std_sentiment_r3d                   NUMERIC(8,5),
+    positive_ratio_r3d                  NUMERIC(8,5),
+    negative_ratio_r3d                  NUMERIC(8,5),
+    event_ma_r3d                        NUMERIC(8,4),
+    event_earnings_r3d                  NUMERIC(8,4),
+    event_management_r3d                NUMERIC(8,4),
+    event_legal_r3d                     NUMERIC(8,4),
+    -- rolling 7-day
+    news_count_r7d                      NUMERIC(8,4),
+    avg_sentiment_r7d                   NUMERIC(8,5),
+    std_sentiment_r7d                   NUMERIC(8,5),
+    positive_ratio_r7d                  NUMERIC(8,5),
+    negative_ratio_r7d                  NUMERIC(8,5),
+    event_ma_r7d                        NUMERIC(8,4),
+    event_earnings_r7d                  NUMERIC(8,4),
+    event_management_r7d                NUMERIC(8,4),
+    event_legal_r7d                     NUMERIC(8,4),
+    -- LLM event types
+    llm_evt_capital_operation           SMALLINT,
+    llm_evt_debt_issuance               SMALLINT,
+    llm_evt_dividend_announcement       SMALLINT,
+    llm_evt_earnings_release            SMALLINT,
+    llm_evt_economic_indicator          SMALLINT,
+    llm_evt_ipo_listing                 SMALLINT,
+    llm_evt_leadership_change           SMALLINT,
+    llm_evt_ma_deal                     SMALLINT,
+    llm_evt_market_data                 SMALLINT,
+    llm_evt_other                       SMALLINT,
+    llm_evt_project_contract            SMALLINT,
+    llm_evt_regulatory_action           SMALLINT,
+    llm_evt_strategic_plan              SMALLINT,
+    -- LLM event rolling 3-day
+    llm_evt_capital_operation_r3d       NUMERIC(8,4),
+    llm_evt_debt_issuance_r3d           NUMERIC(8,4),
+    llm_evt_dividend_announcement_r3d   NUMERIC(8,4),
+    llm_evt_earnings_release_r3d        NUMERIC(8,4),
+    llm_evt_economic_indicator_r3d      NUMERIC(8,4),
+    llm_evt_ipo_listing_r3d             NUMERIC(8,4),
+    llm_evt_leadership_change_r3d       NUMERIC(8,4),
+    llm_evt_ma_deal_r3d                 NUMERIC(8,4),
+    llm_evt_market_data_r3d             NUMERIC(8,4),
+    llm_evt_other_r3d                   NUMERIC(8,4),
+    llm_evt_project_contract_r3d        NUMERIC(8,4),
+    llm_evt_regulatory_action_r3d       NUMERIC(8,4),
+    llm_evt_strategic_plan_r3d          NUMERIC(8,4),
+    -- LLM event rolling 7-day
+    llm_evt_capital_operation_r7d       NUMERIC(8,4),
+    llm_evt_debt_issuance_r7d           NUMERIC(8,4),
+    llm_evt_dividend_announcement_r7d   NUMERIC(8,4),
+    llm_evt_earnings_release_r7d        NUMERIC(8,4),
+    llm_evt_economic_indicator_r7d      NUMERIC(8,4),
+    llm_evt_ipo_listing_r7d             NUMERIC(8,4),
+    llm_evt_leadership_change_r7d       NUMERIC(8,4),
+    llm_evt_ma_deal_r7d                 NUMERIC(8,4),
+    llm_evt_market_data_r7d             NUMERIC(8,4),
+    llm_evt_other_r7d                   NUMERIC(8,4),
+    llm_evt_project_contract_r7d        NUMERIC(8,4),
+    llm_evt_regulatory_action_r7d       NUMERIC(8,4),
+    llm_evt_strategic_plan_r7d          NUMERIC(8,4),
+    PRIMARY KEY (ticker, date),
+    CONSTRAINT fk_ds_company FOREIGN KEY (ticker) REFERENCES gold.company_dim(ticker)
+);
+
+CREATE TABLE IF NOT EXISTS gold.sentiment_weekly (
     ticker                          TEXT        NOT NULL,
     week_start                      DATE        NOT NULL,
     news_count                      INT,
@@ -289,10 +296,11 @@ CREATE TABLE IF NOT EXISTS gold_sentiment_weekly (
     llm_evt_project_contract        INT,
     llm_evt_regulatory_action       INT,
     llm_evt_strategic_plan          INT,
-    PRIMARY KEY (ticker, week_start)
+    PRIMARY KEY (ticker, week_start),
+    CONSTRAINT fk_sw_company FOREIGN KEY (ticker) REFERENCES gold.company_dim(ticker)
 );
 
-CREATE TABLE IF NOT EXISTS gold_sentiment_monthly (
+CREATE TABLE IF NOT EXISTS gold.sentiment_monthly (
     ticker                          TEXT        NOT NULL,
     month_start                     DATE        NOT NULL,
     news_count                      INT,
@@ -317,5 +325,21 @@ CREATE TABLE IF NOT EXISTS gold_sentiment_monthly (
     llm_evt_project_contract        INT,
     llm_evt_regulatory_action       INT,
     llm_evt_strategic_plan          INT,
-    PRIMARY KEY (ticker, month_start)
+    PRIMARY KEY (ticker, month_start),
+    CONSTRAINT fk_sm_company FOREIGN KEY (ticker) REFERENCES gold.company_dim(ticker)
+);
+
+CREATE TABLE IF NOT EXISTS gold.commodity_daily (
+    asset_key       TEXT        NOT NULL,
+    date            DATE        NOT NULL,
+    name            TEXT,
+    category        TEXT,
+    close           NUMERIC,
+    daily_return    NUMERIC,
+    close_r3d       NUMERIC,
+    close_r7d       NUMERIC,
+    return_r3d      NUMERIC,
+    return_r7d      NUMERIC,
+    volatility_r7d  NUMERIC,
+    PRIMARY KEY (asset_key, date)
 );

@@ -68,6 +68,10 @@ def run() -> None:
     event_facts_df, event_bridge_df = features.build_event_tables(events_raw_df)
     log.info("Events: %d facts, %d company links", len(event_facts_df), len(event_bridge_df))
 
+    log.info("Building commodity features...")
+    commodity_df = features.build_commodity_features(engine)
+    log.info("Commodity daily: %d rows across %d assets", len(commodity_df), commodity_df["asset_key"].nunique() if not commodity_df.empty else 0)
+
     log.info("Ensuring gold schema exists...")
     loader.ensure_schema(engine)
 
@@ -80,6 +84,7 @@ def run() -> None:
         event_bridge_df,
         weekly_df,
         monthly_df,
+        commodity_df,
     )
 
     log.info("Gold layer refresh complete.")

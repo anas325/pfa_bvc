@@ -7,7 +7,41 @@ from sqlalchemy.engine import Engine
 # ---------------------------------------------------------------------------
 
 _SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS gold_daily_signals (
+CREATE SCHEMA IF NOT EXISTS gold;
+
+CREATE TABLE IF NOT EXISTS gold.company_dim (
+    ticker                  TEXT        PRIMARY KEY,
+    company_name            TEXT,
+    sector                  TEXT,
+    ceo                     TEXT,
+    founded                 INT,
+    headquarters            TEXT,
+    revenue                 TEXT,
+    employees               INT,
+    total_news_count        INT         NOT NULL DEFAULT 0,
+    avg_sentiment_all_time  NUMERIC(8,5),
+    top_event_type          TEXT,
+    first_article_date      DATE,
+    last_article_date       DATE
+);
+
+CREATE TABLE IF NOT EXISTS gold.event_facts (
+    fingerprint     TEXT        PRIMARY KEY,
+    event_type      TEXT,
+    event_date      DATE,
+    first_seen      TIMESTAMPTZ,
+    article_count   INT         NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS gold.event_company_bridge (
+    fingerprint     TEXT        NOT NULL,
+    ticker          TEXT        NOT NULL,
+    PRIMARY KEY (fingerprint, ticker),
+    CONSTRAINT fk_ecb_event    FOREIGN KEY (fingerprint) REFERENCES gold.event_facts(fingerprint),
+    CONSTRAINT fk_ecb_company  FOREIGN KEY (ticker)      REFERENCES gold.company_dim(ticker)
+);
+
+CREATE TABLE IF NOT EXISTS gold.daily_signals (
     ticker                              TEXT        NOT NULL,
     date                                DATE        NOT NULL,
     close                               NUMERIC,
@@ -90,40 +124,11 @@ CREATE TABLE IF NOT EXISTS gold_daily_signals (
     llm_evt_project_contract_r7d        NUMERIC(8,4),
     llm_evt_regulatory_action_r7d       NUMERIC(8,4),
     llm_evt_strategic_plan_r7d          NUMERIC(8,4),
-    PRIMARY KEY (ticker, date)
+    PRIMARY KEY (ticker, date),
+    CONSTRAINT fk_ds_company FOREIGN KEY (ticker) REFERENCES gold.company_dim(ticker)
 );
 
-CREATE TABLE IF NOT EXISTS gold_company_dim (
-    ticker                  TEXT        PRIMARY KEY,
-    company_name            TEXT,
-    sector                  TEXT,
-    ceo                     TEXT,
-    founded                 INT,
-    headquarters            TEXT,
-    revenue                 TEXT,
-    employees               INT,
-    total_news_count        INT         NOT NULL DEFAULT 0,
-    avg_sentiment_all_time  NUMERIC(8,5),
-    top_event_type          TEXT,
-    first_article_date      DATE,
-    last_article_date       DATE
-);
-
-CREATE TABLE IF NOT EXISTS gold_event_facts (
-    fingerprint     TEXT        PRIMARY KEY,
-    event_type      TEXT,
-    event_date      DATE,
-    first_seen      TIMESTAMPTZ,
-    article_count   INT         NOT NULL DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS gold_event_company_bridge (
-    fingerprint     TEXT        NOT NULL,
-    ticker          TEXT        NOT NULL,
-    PRIMARY KEY (fingerprint, ticker)
-);
-
-CREATE TABLE IF NOT EXISTS gold_sentiment_weekly (
+CREATE TABLE IF NOT EXISTS gold.sentiment_weekly (
     ticker                          TEXT        NOT NULL,
     week_start                      DATE        NOT NULL,
     news_count                      INT,
@@ -148,10 +153,11 @@ CREATE TABLE IF NOT EXISTS gold_sentiment_weekly (
     llm_evt_project_contract        INT,
     llm_evt_regulatory_action       INT,
     llm_evt_strategic_plan          INT,
-    PRIMARY KEY (ticker, week_start)
+    PRIMARY KEY (ticker, week_start),
+    CONSTRAINT fk_sw_company FOREIGN KEY (ticker) REFERENCES gold.company_dim(ticker)
 );
 
-CREATE TABLE IF NOT EXISTS gold_sentiment_monthly (
+CREATE TABLE IF NOT EXISTS gold.sentiment_monthly (
     ticker                          TEXT        NOT NULL,
     month_start                     DATE        NOT NULL,
     news_count                      INT,
@@ -176,17 +182,46 @@ CREATE TABLE IF NOT EXISTS gold_sentiment_monthly (
     llm_evt_project_contract        INT,
     llm_evt_regulatory_action       INT,
     llm_evt_strategic_plan          INT,
-    PRIMARY KEY (ticker, month_start)
+    PRIMARY KEY (ticker, month_start),
+    CONSTRAINT fk_sm_company FOREIGN KEY (ticker) REFERENCES gold.company_dim(ticker)
+);
+
+CREATE TABLE IF NOT EXISTS gold.commodity_daily (
+    asset_key       TEXT        NOT NULL,
+    date            DATE        NOT NULL,
+    name            TEXT,
+    category        TEXT,
+    close           NUMERIC,
+    daily_return    NUMERIC,
+    close_r3d       NUMERIC,
+    close_r7d       NUMERIC,
+    return_r3d      NUMERIC,
+    return_r7d      NUMERIC,
+    volatility_r7d  NUMERIC,
+    PRIMARY KEY (asset_key, date)
 );
 """
 
-_GOLD_TABLES = [
-    "gold_daily_signals",
-    "gold_company_dim",
-    "gold_event_facts",
-    "gold_event_company_bridge",
-    "gold_sentiment_weekly",
-    "gold_sentiment_monthly",
+# Truncate order: children before parents (respects FK constraints)
+_TRUNCATE_ORDER = [
+    "gold.daily_signals",
+    "gold.sentiment_weekly",
+    "gold.sentiment_monthly",
+    "gold.event_company_bridge",
+    "gold.event_facts",
+    "gold.company_dim",
+    "gold.commodity_daily",
+]
+
+# Insert order: parents before children
+_INSERT_ORDER = [
+    "gold.company_dim",
+    "gold.event_facts",
+    "gold.event_company_bridge",
+    "gold.daily_signals",
+    "gold.sentiment_weekly",
+    "gold.sentiment_monthly",
+    "gold.commodity_daily",
 ]
 
 
@@ -200,15 +235,24 @@ def ensure_schema(engine: Engine) -> None:
 
 
 def full_refresh(engine: Engine, table_name: str, df: pd.DataFrame) -> None:
-    if table_name not in _GOLD_TABLES:
+    if table_name not in _INSERT_ORDER:
         raise ValueError(f"Unknown gold table: {table_name}")
     if df.empty:
         print(f"  [{table_name}] skipped — no data")
         return
+    # pandas to_sql needs the schema and table name separated
+    schema, tbl = table_name.split(".")
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE TABLE {table_name}"))
-        df.to_sql(table_name, conn, if_exists="append", index=False, method="multi")
+        df.to_sql(tbl, conn, schema=schema, if_exists="append", index=False, method="multi")
     print(f"  [{table_name}] {len(df):,} rows written")
+
+
+def truncate_all(engine: Engine) -> None:
+    """Truncates all gold tables in FK-safe order (children first)."""
+    with engine.begin() as conn:
+        for tbl in _TRUNCATE_ORDER:
+            conn.execute(text(f"TRUNCATE TABLE {tbl}"))
 
 
 def run_all(
@@ -219,10 +263,23 @@ def run_all(
     event_bridge_df: pd.DataFrame,
     weekly_df: pd.DataFrame,
     monthly_df: pd.DataFrame,
+    commodity_df: pd.DataFrame,
 ) -> None:
-    full_refresh(engine, "gold_daily_signals", signals_df)
-    full_refresh(engine, "gold_company_dim", company_dim_df)
-    full_refresh(engine, "gold_event_facts", event_facts_df)
-    full_refresh(engine, "gold_event_company_bridge", event_bridge_df)
-    full_refresh(engine, "gold_sentiment_weekly", weekly_df)
-    full_refresh(engine, "gold_sentiment_monthly", monthly_df)
+    truncate_all(engine)
+    schema = "gold"
+
+    def _insert(tbl: str, df: pd.DataFrame) -> None:
+        if df.empty:
+            print(f"  [gold.{tbl}] skipped — no data")
+            return
+        with engine.begin() as conn:
+            df.to_sql(tbl, conn, schema=schema, if_exists="append", index=False, method="multi")
+        print(f"  [gold.{tbl}] {len(df):,} rows written")
+
+    _insert("company_dim", company_dim_df)
+    _insert("event_facts", event_facts_df)
+    _insert("event_company_bridge", event_bridge_df)
+    _insert("daily_signals", signals_df)
+    _insert("sentiment_weekly", weekly_df)
+    _insert("sentiment_monthly", monthly_df)
+    _insert("commodity_daily", commodity_df)
