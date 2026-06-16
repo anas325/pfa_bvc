@@ -53,6 +53,10 @@ bibliography: bibliographie.bib
 
 {{< pagebreak >}}
 
+{{< include partie1/chapitre_analyse_strategique.qmd >}}
+
+{{< pagebreak >}}
+
 {{< include partie1/chapitre2_specification_besoins.qmd >}}
 
 {{< pagebreak >}}

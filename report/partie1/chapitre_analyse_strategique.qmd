@@ -1,0 +1,364 @@
+# Analyse Stratégique et Cadrage du Projet
+
+## Introduction
+
+Ce chapitre situe le projet dans son environnement macroéconomique et concurrentiel.
+L'analyse PESTEL identifie les forces contextuelles qui justifient la pertinence d'un
+système de veille financière intelligent pour la Bourse des Valeurs de Casablanca (BVC).
+L'analyse SWOT évalue les forces et faiblesses de la solution développée face aux
+opportunités et menaces du marché. Les cinq forces de Porter mesurent l'intensité
+concurrentielle du secteur et éclairent le positionnement stratégique retenu. Le chapitre
+se conclut par un tableau de cadrage formalisant les objectifs et contraintes du projet
+selon la méthode SMART.
+
+## Taille et Structure du Marché Cible
+
+La Bourse des Valeurs de Casablanca constitue le marché principal de la solution développée.
+Sa structure définit directement le périmètre des données disponibles et les cas d'usage
+potentiels du système.
+
+| Indicateur | Valeur (2024) | Source |
+|-----------|:-------------:|--------|
+| Nombre de sociétés cotées | 76 | BVC |
+| Capitalisation boursière | ~650 Mds MAD | BVC |
+| Volume quotidien moyen échangé | 200–400 M MAD | BVC |
+| Nombre de courtiers agréés | 17 | AMMC |
+| Nombre d'OPCVM (fonds collectifs) | > 430 | AMMC |
+| Nombre d'investisseurs institutionnels actifs | ~120 | AMMC |
+| Taux de pénétration boursière (ménages) | < 2 % | BAM |
+| Indice de référence principal | MASI | BVC |
+
+La faible pénétration boursière auprès des ménages contraste avec la sophistication
+croissante des investisseurs institutionnels (OPCVM, fonds de pension, banques d'investissement)
+qui représentent plus de 80 % du volume échangé. Cette structure désigne les professionnels
+de la finance — analystes *buy-side*, gestionnaires de portefeuilles, *trading desks*
+des banques — comme les utilisateurs primaires du système de veille développé.
+
+Le marché secondaire cible comprend les journalistes économiques, les chercheurs
+académiques spécialisés en finance et les fintechs marocaines en cours de développement.
+L'absence d'outil de veille sémantique spécialisé sur la BVC — confirmée par l'analyse
+concurrentielle — constitue le principal argument de positionnement.
+
+## Analyse PESTEL
+
+L'analyse PESTEL identifie les six catégories de facteurs macroenvironnementaux qui
+influencent le développement et l'adoption du système de veille financière.
+
+### Facteurs Politiques
+
+La BVC opère sous la tutelle du Ministère de l'Économie et des Finances et est régulée
+par l'AMMC (Autorité Marocaine du Marché des Capitaux). La stratégie gouvernementale
+**Plan d'accélération industrielle** et le programme de **réforme du secteur financier
+Vision 2030** créent un contexte favorable à la modernisation des outils d'analyse
+financière. La volonté politique de renforcer la place financière de Casablanca
+(Casablanca Finance City, CFC) stimule la demande en outils de surveillance et
+d'analyse de marché conformes aux standards internationaux.
+
+La politique monétaire de **Bank Al-Maghrib (BAM)** — et en particulier les décisions
+de taux directeur — constitue un facteur d'influence majeur sur la dynamique des cours
+boursiers, notamment pour les valeurs bancaires et immobilières qui représentent une
+part significative de la capitalisation de la BVC. Le système de veille développé doit
+donc surveiller les communiqués de la BAM au même titre que la presse financière générale.
+
+### Facteurs Économiques
+
+Avec une capitalisation boursière d'environ 650 milliards de MAD, la BVC est la deuxième
+plus grande bourse d'Afrique subsaharienne francophone. La croissance économique du Maroc
+(+3,4 % en 2024 selon le HCP) et la maîtrise de l'inflation (< 2,5 %) contribuent à
+une stabilité macroéconomique favorable aux investissements en capital. Le retour des
+dividendes post-COVID des grandes valeurs (IAM, Maroc Telecom, Attijariwafa, BCP) a
+renforcé l'attrait de la Bourse pour les investisseurs institutionnels.
+
+L'accès aux commodités est stratégique : le Maroc détient 70 % des réserves mondiales
+de phosphates, faisant de l'OCP Group (principale capitalisation de la BVC) une valeur
+sensible aux prix internationaux du minerai. L'intégration des données de commodités
+(or, pétrole, phosphates via Yahoo Finance) dans le système de veille répond à ce besoin
+de corrélation multi-actifs.
+
+### Facteurs Sociaux
+
+Le taux de pénétration boursière reste inférieur à 2 % des ménages, révélant un marché
+de détail sous-développé. En revanche, le profil des investisseurs institutionnels évolue
+rapidement : la génération des analystes financiers formés aux standards CFA et ACCA
+manifeste une appétence pour les outils d'analyse quantitative avancée, notamment les
+solutions exploitant l'intelligence artificielle. Cette évolution culturelle réduit les
+résistances à l'adoption d'un système de veille basé sur des modèles de langage.
+
+La presse économique marocaine en ligne (LeMatin, L'Économiste, Challenge, Médias24) a
+connu une croissance soutenue de sa couverture des marchés financiers depuis 2020, générant
+un volume d'articles exploitables suffisant pour alimenter les modèles d'analyse sémantique.
+
+### Facteurs Technologiques
+
+La démocratisation des modèles de langage de grande taille (LLM) via des interfaces comme
+Ollama et OpenRouter rend l'analyse sémantique à grande échelle accessible sans infrastructure
+propriétaire coûteuse. La disponibilité de LLaMA 3.1 8B en mode local élimine la dépendance
+à un fournisseur unique et réduit à zéro le coût marginal d'analyse en production.
+
+L'essor des APIs FinTech (Yahoo Finance, Internet Archive CDX, feedparser) fournit
+une base de données historiques riche et gratuite, compensant l'absence d'abonnement
+à un terminal Bloomberg ou Reuters. Cette combinaison d'accès ouverts constitue un avantage
+compétitif décisif pour le positionnement « low cost » de la solution.
+
+L'architecture conteneurisée Docker et l'orchestrateur Apache Airflow permettent un déploiement
+portable et scalable, de la machine locale du développeur à un serveur cloud sans modification
+du code applicatif.
+
+### Facteurs Environnementaux
+
+Les critères ESG (Environnement, Social, Gouvernance) deviennent un facteur d'évaluation
+progressivement intégré par les gestionnaires de fonds institutionnels sur la BVC. L'AMMC
+a lancé en 2022 une initiative de reporting de durabilité pour les émetteurs cotés.
+Le système de veille peut être étendu pour extraire les signaux ESG des articles de presse
+(projets d'énergie renouvelable, publications de rapports RSE, controverses environnementales),
+ce qui constitue une opportunité d'extension naturelle identifiée comme fonctionnalité V2.
+
+### Facteurs Légaux
+
+La **loi 43-12** portant création de l'AMMC et le **Règlement Général de la Bourse**
+encadrent la diffusion et l'utilisation des informations sur les marchés. La directive
+anti-délit d'initié interdit l'utilisation d'informations non publiques, ce qui renforce
+la légitimité du système développé, qui se limite à l'analyse d'informations publiquement
+disponibles (presse, communiqués, flux RSS officiels).
+
+La **loi 09-08 relative à la protection des personnes physiques** (équivalent marocain
+du RGPD) s'applique aux données de personnes physiques éventuellement mentionnées dans
+les articles. Le système implémente une politique de non-stockage des données personnelles
+identifiantes au-delà des mentions de noms dans leur contexte éditorial public.
+
+La question du **droit d'auteur** sur les articles scrappés est un risque légal résiduel :
+la solution se limite au stockage des métadonnées (titre, URL, date) et aux extraits
+en lecture pour l'analyse sémantique, sans redistribution des articles intégraux.
+
+### Synthèse PESTEL
+
+```{mermaid}
+flowchart LR
+    PESTEL["Environnement\nPESTEL"]
+
+    PESTEL --> P["🏛️ Politique\n• Tutelle AMMC\n• Vision 2030\n• Réforme CFC\n→ Favorable"]
+    PESTEL --> E["💰 Économique\n• Cap. 650 Mds MAD\n• OCP / phosphates\n• Post-COVID positif\n→ Porteur"]
+    PESTEL --> S["👥 Social\n• Instit. sophistiqués\n• Presse en ligne ↑\n• Pénétration faible\n→ Neutre/Porteur"]
+    PESTEL --> T["🖥️ Technologique\n• LLM open-source\n• API FinTech libres\n• Docker / Airflow\n→ Très favorable"]
+    PESTEL --> En["🌿 Environnemental\n• ESG émergent\n• RSE AMMC 2022\n• Extension V2\n→ Opportunité"]
+    PESTEL --> L["⚖️ Légal\n• Loi 09-08 / RGPD\n• Info publique ✅\n• Droit auteur risque\n→ Vigilance"]
+```
+
+## Analyse SWOT
+
+L'analyse SWOT évalue la position de la solution développée en croisant ses caractéristiques
+internes (forces et faiblesses) avec le contexte externe (opportunités et menaces).
+
+### Matrice SWOT
+
+|  | **Opportunités** | **Menaces** |
+|--|------------------|-------------|
+| **Forces** | **SO — Stratégie offensive** | **ST — Stratégie défensive** |
+| Architecture médaillon modulaire et extensible | Déployer la veille sur les marchés africains francophones voisins (BRVM, Bourse d'Alger) | Maintenir le mode LLM local (Ollama) pour neutraliser la dépendance à OpenRouter |
+| Multi-sources : 13 flux RSS + 8 domaines CDX | Développer un module d'alertes en temps réel (websocket) pour les gérants de fonds | Diversifier les sources RSS pour atténuer le blocage d'un éditeur unique |
+| Backtesting intégré avec 3 stratégies financières | Monétiser via API SaaS (plans courtiers / OPCVM) | Cacher les articles en local pour limiter l'exposition au droit d'auteur |
+| Coût marginal quasi nul (LLaMA local) | Intégrer les rapports annuels AMMC pour les analyses fondamentales | Mettre en place un système de retry robuste pour toutes les APIs tierces |
+| **Faiblesses** | **WO — Stratégie de rattrapage** | **WT — Stratégie de survie** |
+| Corpus limité sur les petites capitalisations | Enrichir le backfill CDX sur les périodes 2015-2020 pour les petits titres | Définir un seuil de 60 jours d'historique minimum avant modélisation d'un titre |
+| Hypothèses simplificatrices du backtesting | Intégrer un modèle de coûts de transaction réaliste (commission courtier BVC ~0,3 %) | Communiquer clairement les limites du backtesting dans l'interface |
+| Interface non accessible sur mobile | Développer une API REST JSON pour permettre des frontends alternatifs | Maintenir Streamlit comme interface de démonstration (non-critique pour la production) |
+| Dépendance Yahoo Finance pour le OHLCV | Implémenter un scraper de secours sur BVC Open Data | Maintenir un cache Parquet rechargeable en cas d'indisponibilité |
+
+### Tableau SWOT Synthétique
+
+| | Interne — **Forces (S)** | Interne — **Faiblesses (W)** |
+|-|--------------------------|------------------------------|
+| **Externe — Opportunités (O)** | Architecture extensible → marchés africains; LLM low-cost → SaaS abordable | Enrichissement backfill CDX → corpus historique plus large |
+| **Externe — Menaces (T)** | Mode LLM local → indépendance API cloud; Multi-sources → résilience | Seuil minimum de données → qualité garantie; cache local → résilience OHLCV |
+
+La configuration **Force × Opportunité** est la plus favorable : le coût marginal quasi nul
+et la modularité de l'architecture permettent d'envisager une extension rapide à d'autres
+marchés africains sans refonte architecturale. La configuration **Faiblesse × Menace** identifie
+le risque principal : la concentration du corpus sur les grandes capitalisations, qui rend
+le modèle fragile pour les titres peu médiatisés — ce que les seuils de filtrage dans
+le pipeline de modélisation cherchent à atténuer.
+
+## Analyse des Cinq Forces de Porter
+
+L'analyse des cinq forces de Porter évalue l'intensité concurrentielle du secteur des
+outils d'analyse financière en ligne appliqués aux marchés émergents, et en particulier
+à la BVC.
+
+### Force 1 — Pouvoir de Négociation des Fournisseurs : **Élevé**
+
+Les fournisseurs critiques du système sont peu nombreux et ne disposent pas d'équivalents
+directs. OpenRouter est le seul agrégateur multi-modèles LLM combinant accès à LLaMA,
+Mistral et Claude via une API unifiée. Yahoo Finance est le seul fournisseur gratuit
+de données OHLCV historiques sur les titres BVC. Internet Archive est le seul archive
+web publiquement indexable via l'API CDX pour les archives de presse marocaine.
+
+Cette concentration crée un risque de dépendance atténué par les stratégies de mitigation
+décrites au chapitre management : mode Ollama local, cache Parquet OHLCV, backfill CDX
+pré-téléchargé. Le double mode LLM (local / cloud) est la réponse architecturale
+principale à ce pouvoir de fournisseur élevé.
+
+### Force 2 — Pouvoir de Négociation des Clients : **Moyen**
+
+Les clients primaires — analystes financiers et gestionnaires de fonds institutionnels —
+disposent d'alternatives, mais aucune n'est spécifiquement adaptée au marché marocain.
+Bloomberg Terminal et Reuters Eikon couvrent la BVC superficiellement et à un coût
+prohibitif (~25 000 USD/an). Les solutions manuelles (agrégation RSS + Excel + jugement
+d'expert) constituent un substitut partiel. Le pouvoir de négociation des clients est
+donc réel mais limité par l'absence d'alternative équivalente dans le segment *Maroc-centrique*.
+
+### Force 3 — Menace des Nouveaux Entrants : **Faible à Moyenne**
+
+Les barrières à l'entrée sont significatives mais non insurmontables. La constitution d'un
+corpus historique d'articles marocains nécessite plusieurs mois de collecte ou d'accès
+aux archives CDX. L'expertise en ingénierie des features financières (fenêtres glissantes,
+split temporel strict, indicateurs d'événements) constitue un savoir-faire non trivial.
+Cependant, la démocratisation des LLM via Ollama et des APIs FinTech via Python réduit
+les barrières techniques pour de nouveaux entrants bien financés.
+
+Le principal facteur de protection est la **fenêtre d'avance** : l'accumulation d'un
+corpus de presse depuis 2020 et la construction du graphe de connaissance Neo4j représentent
+un actif de données difficile à répliquer rapidement.
+
+### Force 4 — Menace des Produits Substituts : **Élevée**
+
+Les substituts fonctionnels sont nombreux :
+
+| Substitut | Couverture BVC | Analyse sémantique | Coût |
+|-----------|:--------------:|:------------------:|:----:|
+| Bloomberg Terminal | Partielle | Propriétaire (IA) | ~25 000 $/an |
+| Reuters Eikon | Partielle | Propriétaire | ~22 000 $/an |
+| FinBERT (modèle seul) | Aucune | Anglais uniquement | Gratuit (modèle) |
+| BVC Open Data | Complète | Aucune | Gratuit |
+| Agrégateurs RSS + Excel | Partielle | Manuelle | Quasi-nul |
+| Outils BI (Tableau, Power BI) | Nulle (données manuelles) | Aucune | 70–100 $/user/mois |
+
+La menace principale vient de **Bloomberg et Reuters**, qui disposent des ressources pour
+enrichir leur couverture des marchés africains si la demande s'avère suffisante. Cependant,
+leur modèle de tarification les exclut de fait du segment des PME, des fintechs marocaines
+émergentes et des universités.
+
+### Force 5 — Intensité de la Rivalité Concurrentielle : **Faible**
+
+Le segment *veille financière sémantique automatisée spécialisée BVC* est aujourd'hui
+**non contesté**. Aucun outil commercial ou académique équivalent n'a été identifié
+lors de l'étude de l'existant. Cette situation de quasi-monopole de fait offre une fenêtre
+d'opportunité stratégique, mais elle est temporaire : la montée en puissance des outils
+IA généralistes et la disponibilité croissante des LLM pourraient attirer de nouveaux
+compétiteurs locaux dans un horizon de deux à trois ans.
+
+### Synthèse des Cinq Forces
+
+```{mermaid}
+graph TD
+    CENTER["Solution de Veille\nFinancière BVC"]
+
+    F1["🔺 Fournisseurs\nPouvoir : ÉLEVÉ\n(OpenRouter, Yahoo Finance,\nInternet Archive)"]
+    F2["🔶 Clients\nPouvoir : MOYEN\n(institutionnels sans\nalternative locale)"]
+    F3["🔷 Nouveaux entrants\nMenace : FAIBLE/MOYENNE\n(barrières corpus +\nfenêtre d'avance)"]
+    F4["🔴 Substituts\nMenace : ÉLEVÉE\n(Bloomberg, Reuters,\nagrégateurs manuels)"]
+    F5["🟢 Rivalité\nIntensité : FAIBLE\n(segment BVC\nnon contesté)"]
+
+    F1 --> CENTER
+    F2 --> CENTER
+    F3 --> CENTER
+    F4 --> CENTER
+    CENTER --> F5
+```
+
+## Positionnement Stratégique
+
+### Matrice de Positionnement Concurrentiel
+
+La solution se positionne dans le quadrant **forte spécialisation / faible coût**, qui
+n'est occupé par aucun acteur existant sur le marché marocain.
+
+```{mermaid}
+quadrantChart
+    title Positionnement concurrentiel — Outils d'analyse financière BVC
+    x-axis "Généraliste (marchés mondiaux)" --> "Spécialiste (marché BVC)"
+    y-axis "Coût faible / Open Source" --> "Coût élevé / Propriétaire"
+    quadrant-1 "Niche premium"
+    quadrant-2 "Leaders mondiaux"
+    quadrant-3 "Outils génériques"
+    quadrant-4 "Notre positionnement ✅"
+    Bloomberg Terminal: [0.15, 0.95]
+    Reuters Eikon: [0.20, 0.90]
+    FinBERT: [0.25, 0.15]
+    BVC Open Data: [0.75, 0.05]
+    Agrégateurs RSS Excel: [0.55, 0.10]
+    Notre solution: [0.90, 0.15]
+```
+
+La solution occupe le quadrant inférieur droit : **forte spécialisation BVC** (corpus
+arabophone/francophone, tickers marocains, données OHLCV locales) combinée à un
+**coût quasi nul** (LLM open-source, APIs gratuites, infrastructure Docker). Ce quadrant
+constitue un *blue ocean* stratégique que les acteurs établis ne peuvent pas occuper
+sans remettre en question leur modèle de tarification.
+
+### Proposition de Valeur
+
+La proposition de valeur centrale de la solution s'articule autour de trois axes :
+
+1. **Pertinence locale** : analyse en français et en arabe, sources de presse marocaines,
+   tickers et secteurs de la BVC, données OHLCV depuis l'introduction en bourse de chaque titre.
+2. **Intégration verticale** : de la collecte RSS brute jusqu'aux signaux prédictifs journaliers,
+   en passant par l'analyse sémantique LLM et le backtesting financier — le tout dans un
+   pipeline orchestré et reproductible.
+3. **Transparence algorithmique** : la chaîne de transformation est entièrement auditée
+   (PipelineLogger, Git, Airflow DAG logs), contrairement aux boîtes noires des terminaux
+   Bloomberg et Reuters.
+
+## Tableau de Cadrage du Projet
+
+Le tableau de cadrage formalise le contrat entre l'étudiant, l'encadrant et l'institution
+sur les dimensions clés du projet.
+
+| Dimension | Contenu |
+|-----------|---------|
+| **Intitulé** | Système de veille financière intelligente pour la Bourse des Valeurs de Casablanca |
+| **Commanditaire** | EMSI — École Marocaine des Sciences de l'Ingénieur |
+| **Maître d'œuvre** | Anas WARDI — 4ème année Génie Informatique |
+| **Encadrant** | Encadrant pédagogique EMSI |
+| **Problématique** | Comment automatiser la surveillance sémantique de la presse financière marocaine pour générer des signaux prédictifs exploitables sur la BVC ? |
+| **Périmètre** | 76 sociétés cotées BVC, 13 sources RSS, archives CDX (2020–2025), commodités (or, pétrole, phosphates) |
+| **Hors périmètre** | Marchés de gré à gré (OTC), dérivés, trading haute fréquence, données intrajournalières |
+| **Livrables** | Pipeline de collecte et d'analyse, couche gold PostgreSQL, 4 DAGs Airflow, 2 modèles ML, 3 stratégies de backtesting, tableau de bord Streamlit, rapport PFA |
+| **Contraintes** | Machine locale Windows 11 + WSL2, coût LLM ≤ budget académique, données publiques uniquement, aucune donnée confidentielle |
+| **Durée** | 7 mois (octobre 2025 — avril 2026) |
+| **Budget** | Ressources académiques + coût API OpenRouter estimé < 50 USD sur la durée du projet |
+| **Critère de réussite principal** | Pipeline LLM opérationnel en production + backtesting démontrant une sur-performance vs MASI |
+
+## Objectifs SMART
+
+Les objectifs SMART (Spécifique, Mesurable, Atteignable, Réaliste, Temporellement borné)
+structurent la feuille de route technique du projet.
+
+| # | Objectif | Spécifique | Mesurable | Atteignable | Réaliste | Délai |
+|---|---------|-----------|-----------|-------------|----------|-------|
+| O1 | Mettre en place un pipeline RSS collectant les articles de la presse économique marocaine | Oui (13 flux définis) | > 50 articles/jour | Oui (feedparser disponible) | Oui (1 dev) | Nov. 2025 |
+| O2 | Analyser chaque article avec un LLM et extraire le sentiment, les entités et les événements | Oui (LLaMA 3.1 8B) | < 30 s/article | Oui (OpenRouter/Ollama) | Oui | Déc. 2025 |
+| O3 | Construire une couche gold contenant > 60 features par (ticker, date) | Oui (PostgreSQL gold) | COUNT(colonnes) ≥ 60 | Oui (extractors définis) | Oui | Jan. 2026 |
+| O4 | Orchestrer les 4 pipelines via Apache Airflow sans intervention manuelle | Oui (4 DAGs définis) | 0 intervention manuelle/jour | Oui (Airflow déployé sur WSL2) | Oui | Jan. 2026 |
+| O5 | Entraîner un classificateur atteignant une précision > 55 % sur l'ensemble de test | Oui (RF, split temporel) | Accuracy > 55 % | Oui (benchmark 52 % défini) | Oui | Mars 2026 |
+| O6 | Démontrer une sur-performance de la stratégie S1 vs MASI en backtesting | Oui (S1 vs benchmark) | Rendement cumulatif S1 > MASI | Oui (backtesting implémenté) | Oui | Mars 2026 |
+| O7 | Déployer un tableau de bord Streamlit avec 4 pages de supervision | Oui (4 pages définies) | 4 pages opérationnelles | Oui (Streamlit disponible) | Oui | Fév. 2026 |
+| O8 | Rédiger et soumettre un rapport PFA complet respectant le guide EMSI | Oui (guide 8 chapitres) | 80–130 pages rendues | Oui | Oui | Avr. 2026 |
+
+L'ensemble des objectifs O1 à O7 a été atteint ou dépassé à la date de rédaction du présent
+rapport, comme le détaillent les chapitres de la Partie II.
+
+## Conclusion
+
+Ce chapitre a établi le fondement stratégique du projet. L'analyse PESTEL révèle un
+environnement macroéconomique globalement favorable : la dynamique de modernisation
+du secteur financier marocain, la maturité des outils LLM open-source et le vide
+concurrentiel sur le segment BVC créent une fenêtre d'opportunité que le projet saisit.
+L'analyse SWOT confirme que les forces architecturales de la solution (modularité, coût
+quasi nul, backtesting intégré) surpassent ses faiblesses actuelles (corpus limité pour
+les petites capitalisations). L'analyse de Porter identifie le pouvoir des fournisseurs
+API comme le principal risque externe, neutralisé par la stratégie de double mode LLM.
+Enfin, le positionnement *blue ocean* — forte spécialisation BVC à faible coût — ne
+trouve pas d'équivalent sur le marché et justifie la pertinence de la démarche.
+
+La spécification détaillée des besoins fonctionnels et non fonctionnels est présentée
+dans le chapitre suivant.
