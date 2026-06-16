@@ -1,0 +1,457 @@
+# Planification et Management de Projet
+
+## Introduction
+
+Ce chapitre formalise la dimension managériale du projet selon les pratiques professionnelles
+de gestion de projet. Il présente la décomposition hiérarchique des livrables (WBS),
+le planning détaillé sous forme de diagramme de Gantt, la répartition des responsabilités
+via la matrice RACI, le registre des risques avec leur analyse Pareto, ainsi que les
+critères de réussite retenus pour évaluer l'atteinte des objectifs. Ces éléments constituent
+le cadre de pilotage qui a gouverné l'exécution des sept mois de développement du projet.
+
+## Work Breakdown Structure (WBS)
+
+### Décomposition hiérarchique des livrables
+
+Le WBS (Work Breakdown Structure) décompose le projet en livrables concrets organisés
+en cinq sprints techniques et une phase transversale de rédaction. Chaque sprint correspond
+à une couche fonctionnelle cohérente du système, ce qui facilite le suivi de l'avancement
+et la détection précoce des dérives.
+
+| Code | Livrable | Sprint | Description |
+|------|---------|--------|-------------|
+| **1.0** | **Infrastructure & Collecte** | Sprint 1 | Socle technique et acquisition des données |
+| 1.1 | Environnement Docker | S1 | PostgreSQL 16, Neo4j, MinIO, PgAdmin via Docker Compose |
+| 1.2 | Pipeline RSS | S1 | feedparser + scrapers LeMatin / Challenge |
+| 1.3 | Spiders Scrapy | S1 | BKAM (taux de change) + LeMatin (cours OHLCV) |
+| 1.4 | Backfill CDX | S1 | Indexation + téléchargement archives Internet Archive (8 domaines) |
+| 1.5 | Ingestion commodités | S1 | Yahoo Finance via yfinance (or, pétrole, phosphates) |
+| **2.0** | **Analyse Sémantique** | Sprint 2 | Enrichissement LLM et persistance graphe |
+| 2.1 | LLM Analyzer | S2 | LLaMA 3.1 via Ollama (local) et OpenRouter (cloud) |
+| 2.2 | Modèles Pydantic | S2 | Article, ArticleSentiment, PersonMention |
+| 2.3 | Neo4j Loader | S2 | Contraintes d'unicité, seed, store_sentiment_batch |
+| 2.4 | Monitoring | S2 | PipelineLogger (SQLite) — métriques par exécution |
+| 2.5 | Agent LangChain | S2 | Enrichissement structuré des sociétés cotées (Tavily) |
+| **3.0** | **Couche Gold & Orchestration** | Sprint 3 | Transformation analytique et automatisation |
+| 3.1 | Schéma gold PostgreSQL | S3 | daily_signals, company_dim, sentiment_weekly, event_facts, commodity_daily |
+| 3.2 | Gold pipeline | S3 | extractors.py, features.py, loader.py |
+| 3.3 | DAGs Airflow | S3 | rss_pipeline (horaire), stock_prices (17h), bkam (10h), gold_layer (02h) |
+| 3.4 | Validation end-to-end | S3 | Vérification cohérence silver → gold sur données réelles |
+| **4.0** | **Modélisation & Backtesting** | Sprint 4 | Prédiction et validation financière |
+| 4.1 | Construction dataset | S4 | Split temporel, filtrage, ~80 features par (ticker, date) |
+| 4.2 | Modèles prédictifs | S4 | RF Classificateur + RF Régresseur + baseline logistique |
+| 4.3 | Optimisation hyperparamètres | S4 | GridSearch avec TimeSeriesSplit (5 folds) |
+| 4.4 | Backtesting (3 stratégies) | S4 | S1 (classificateur), S2 (régresseur), S3 (Top-3), benchmark MASI |
+| 4.5 | Métriques d'évaluation | S4 | Précision, AUC-ROC, Sharpe, MDD, Calmar |
+| **5.0** | **Tableau de Bord** | Sprint 5 | Interface de supervision et visualisation |
+| 5.1 | Page Overview | S5 | KPI globaux, sentiment par source, heatmap sectorielle |
+| 5.2 | Page Runs | S5 | Historique exécutions Airflow, métriques par pipeline |
+| 5.3 | Page Live | S5 | Flux en direct des articles analysés par LLM |
+| 5.4 | Page Stock Prices | S5 | OHLCV + sentiment superposé + marqueurs d'événements |
+| **6.0** | **Rapport & Soutenance** | Transversal | Livrables académiques finaux |
+| 6.1 | Rédaction Partie I | R | Contexte, spécification, conception, réalisation |
+| 6.2 | Rédaction Partie II | R | Data pipeline, modélisation, évaluation, backtesting |
+| 6.3 | Génération figures | R | 11 visualisations Python (matplotlib) |
+| 6.4 | Soutenance | R | Présentation orale + démonstration |
+
+### Représentation graphique du WBS
+
+La figure suivante représente la structure hiérarchique du WBS sous forme d'arbre.
+Chaque nœud de second niveau correspond à un livrable principal décomposable en
+sous-livrables (feuilles) identifiés dans le tableau précédent.
+
+```{mermaid}
+graph TD
+    ROOT["<b>PFA — Système de Veille\nFinancière BVC</b>"]
+
+    ROOT --> S1["Sprint 1\nInfrastructure & Collecte"]
+    ROOT --> S2["Sprint 2\nAnalyse Sémantique"]
+    ROOT --> S3["Sprint 3\nCouche Gold & Orchestration"]
+    ROOT --> S4["Sprint 4\nModélisation & Backtesting"]
+    ROOT --> S5["Sprint 5\nTableau de Bord"]
+    ROOT --> R["Rapport & Soutenance"]
+
+    S1 --> S1a["Env. Docker\n(PG, Neo4j, MinIO)"]
+    S1 --> S1b["Pipeline RSS\n(13 flux)"]
+    S1 --> S1c["Spiders Scrapy\n(BKAM, LeMatin)"]
+    S1 --> S1d["Backfill CDX\n(8 domaines)"]
+    S1 --> S1e["Commodités\n(Yahoo Finance)"]
+
+    S2 --> S2a["LLM Analyzer\n(Ollama / OpenRouter)"]
+    S2 --> S2b["Modèles Pydantic\n(Article, Sentiment)"]
+    S2 --> S2c["Neo4j Loader\n(graphe entités)"]
+    S2 --> S2d["Monitoring\n(PipelineLogger)"]
+
+    S3 --> S3a["Schéma gold\n(5 tables)"]
+    S3 --> S3b["Gold pipeline\n(extract → feature → load)"]
+    S3 --> S3c["DAGs Airflow\n(4 pipelines)"]
+
+    S4 --> S4a["Dataset\n(split temporel)"]
+    S4 --> S4b["RF Classificateur\n+ Régresseur"]
+    S4 --> S4c["Backtesting\n(3 stratégies vs MASI)"]
+
+    S5 --> S5a["Overview + Runs"]
+    S5 --> S5b["Live + Stock Prices"]
+
+    R --> Ra["Rédaction\n(2 parties)"]
+    R --> Rb["11 figures\n(matplotlib)"]
+    R --> Rc["Soutenance"]
+```
+
+Ce WBS met en évidence la nature modulaire et incrémentale du projet : chaque sprint
+livre un ensemble cohérent de fonctionnalités qui s'appuie sur les livrables du sprint
+précédent. Le Sprint 3 (couche gold) est le pivot du projet, car il intègre les sorties
+des sprints 1 et 2 en une représentation exploitable par la modélisation.
+
+## Planification Détaillée et Diagramme de Gantt
+
+### Tableau des tâches
+
+Le tableau ci-dessous recense les vingt-quatre tâches principales du projet avec leur
+code WBS, leur durée estimée, leurs antériorités et leur sprint d'appartenance.
+
+| Code | Tâche | Durée | Antériorités | Sprint |
+|------|-------|-------|--------------|--------|
+| T1.1 | Configuration Docker Compose (PG, Neo4j, MinIO) | 1 sem | — | S1 |
+| T1.2 | Pipeline RSS (feedparser + scrapers) | 2 sem | T1.1 | S1 |
+| T1.3 | Spider BKAM (taux de change) | 1 sem | T1.1 | S1 |
+| T1.4 | Spider LeMatin (cours boursiers) | 1 sem | T1.1 | S1 |
+| T1.5 | Module backfill CDX (index + fetch) | 2 sem | T1.1 | S1 |
+| T1.6 | Ingestion commodités (Yahoo Finance) | 1 sem | T1.1 | S1 |
+| T2.1 | LLM Analyzer (Ollama + OpenRouter) | 2 sem | T1.2 | S2 |
+| T2.2 | Modèles Pydantic (validation schéma) | 1 sem | T2.1 | S2 |
+| T2.3 | Neo4j Loader (contraintes + store) | 1 sem | T2.1 | S2 |
+| T2.4 | Monitoring / PipelineLogger | 1 sem | T2.1 | S2 |
+| T2.5 | Agent LangChain (enrichissement sociétés) | 1 sem | T2.1 | S2 |
+| T3.1 | Schéma gold PostgreSQL (DDL + migrations) | 1 sem | T2.2 | S3 |
+| T3.2 | Gold pipeline (extractors + features + loader) | 3 sem | T3.1 | S3 |
+| T3.3 | Déploiement DAGs Airflow (4 pipelines) | 2 sem | T3.2 | S3 |
+| T3.4 | Validation end-to-end silver → gold | 1 sem | T3.3 | S3 |
+| T4.1 | Construction dataset (split temporel, ~80 features) | 1 sem | T3.4 | S4 |
+| T4.2 | Baseline + RF Classificateur (GridSearch) | 2 sem | T4.1 | S4 |
+| T4.3 | RF Régresseur + métriques (MAE, Spearman) | 1 sem | T4.2 | S4 |
+| T4.4 | Backtesting (S1/S2/S3 vs MASI) | 2 sem | T4.3 | S4 |
+| T5.1 | Dashboard Streamlit — pages Overview + Runs | 2 sem | T3.4 | S5 |
+| T5.2 | Dashboard Streamlit — pages Live + Stock Prices | 2 sem | T5.1 | S5 |
+| T6.1 | Rédaction Partie I du rapport | 3 sem | T3.4 | R |
+| T6.2 | Génération des figures (11 PNG matplotlib) | 1 sem | T4.4 | R |
+| T6.3 | Rédaction Partie II + mise en forme finale | 3 sem | T6.2 | R |
+
+### Diagramme de Gantt
+
+La figure suivante présente le planning du projet sur sept mois (octobre 2025 — avril 2026),
+avec identification des jalons principaux. Les sprints se chevauchent partiellement,
+reflétant le développement agile itératif adopté.
+
+```{mermaid}
+gantt
+    title Planning du Projet PFA — Système de Veille Financière BVC (2025–2026)
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %Y
+
+    section Sprint 1 — Infrastructure
+    Config. Docker (PG, Neo4j, MinIO)    :t11, 2025-10-01, 7d
+    Pipeline RSS + scrapers              :t12, after t11, 14d
+    Spider BKAM + Spider LeMatin         :t13, after t11, 14d
+    Module backfill CDX                  :t15, 2025-10-20, 14d
+    Ingestion commodités                 :t16, 2025-10-27, 7d
+    Jalón — Collecte opérationnelle      :milestone, 2025-11-03, 0d
+
+    section Sprint 2 — Analyse sémantique
+    LLM Analyzer (Ollama / OpenRouter)   :t21, 2025-11-03, 14d
+    Modèles Pydantic + Neo4j Loader      :t22, after t21, 7d
+    Monitoring + Agent LangChain         :t23, after t21, 7d
+    Jalón — Pipeline LLM opérationnel   :milestone, 2025-11-24, 0d
+
+    section Sprint 3 — Gold & Airflow
+    Schéma gold PostgreSQL               :t31, 2025-11-24, 7d
+    Gold pipeline (extract-feature-load) :t32, after t31, 21d
+    DAGs Airflow (4 pipelines)           :t33, after t32, 14d
+    Validation end-to-end                :t34, after t33, 7d
+    Jalón — Couche gold en production   :milestone, 2026-01-19, 0d
+
+    section Sprint 4 — Modélisation
+    Construction dataset                 :t41, 2026-01-19, 7d
+    RF Classificateur + baseline         :t42, after t41, 14d
+    RF Régresseur + métriques            :t43, after t42, 7d
+    Backtesting (3 stratégies)           :t44, after t43, 14d
+    Jalón — Modèles validés             :milestone, 2026-03-02, 0d
+
+    section Sprint 5 — Dashboard
+    Pages Overview + Runs                :t51, 2026-01-19, 14d
+    Pages Live + Stock Prices            :t52, after t51, 14d
+    Jalón — Dashboard déployé           :milestone, 2026-02-16, 0d
+
+    section Rapport & Soutenance
+    Rédaction Partie I                   :t61, 2026-02-16, 21d
+    Génération figures (11 PNG)          :t62, 2026-03-02, 7d
+    Rédaction Partie II + mise en forme  :t63, 2026-03-09, 21d
+    Révision finale                      :t64, after t63, 14d
+    Jalón — Soutenance                  :milestone, 2026-05-05, 0d
+```
+
+### Chemin Critique
+
+Le chemin critique du projet est la séquence de tâches sans marge de manœuvre dont le
+retard se répercute directement sur la date de soutenance. Il est identifié comme :
+
+> **T1.1 → T1.2 → T2.1 → T2.2 → T3.1 → T3.2 → T3.3 → T3.4 → T4.1 → T4.2 → T4.3 → T4.4 → T6.2 → T6.3**
+
+Ce chemin traverse les cinq sprints techniques sans discontinuité. Les tâches hors chemin
+critique — notamment le backfill CDX (T1.5), l'agent LangChain (T2.5) et le tableau
+de bord (T5.1, T5.2) — disposent d'une marge flottante permettant de les décaler
+sans impacter la date de livraison finale. Le Sprint 3 (Gold pipeline + Airflow)
+constitue le goulot d'étranglement structurel du projet, car il conditionne à la fois
+la modélisation (Sprint 4) et le tableau de bord (Sprint 5).
+
+## Matrice RACI
+
+### Définition des acteurs du projet
+
+Ce projet est réalisé individuellement par un seul étudiant. Les acteurs impliqués sont :
+
+- **Anas WARDI (Étudiant)** : responsable de l'intégralité de la conception, du développement,
+  des tests et de la rédaction.
+- **Encadrant pédagogique** : valide les orientations techniques et académiques, approuve
+  les livrables intermédiaires, oriente les choix lors des points de revue.
+- **Jury de soutenance** : évalue le rapport et la présentation orale finale.
+
+Les rôles RACI sont définis comme suit : **R** = Responsable (exécute), **A** = Approbateur
+(valide et répond du résultat), **C** = Consulté (fournit un avis avant décision),
+**I** = Informé (reçoit l'information après décision).
+
+### Tableau RACI
+
+| Activité | Étudiant | Encadrant | Jury |
+|---------|:--------:|:---------:|:----:|
+| Configuration infrastructure Docker | R/A | C | I |
+| Développement pipeline RSS & scrapers | R/A | I | I |
+| Développement spiders Scrapy (BKAM, LeMatin) | R/A | I | I |
+| Implémentation LLM Analyzer | R/A | C | I |
+| Conception schéma PostgreSQL silver & gold | R/A | C | I |
+| Développement gold pipeline (features) | R/A | I | I |
+| Déploiement et configuration des DAGs Airflow | R/A | I | I |
+| Modélisation ML (RF classificateur/régresseur) | R/A | C | I |
+| Conception et implémentation du backtesting | R/A | C | I |
+| Développement du tableau de bord Streamlit | R/A | I | I |
+| Rédaction du rapport PFA | R | A/C | I |
+| Génération des figures et visualisations | R/A | I | I |
+| Présentation et soutenance | R | I | A |
+
+### Justification des Choix Critiques
+
+La concentration des rôles R sur l'étudiant est inhérente à la nature individuelle du
+projet de fin d'études. L'encadrant endosse le rôle d'approbateur (A) sur la rédaction
+du rapport, car il valide la conformité académique et la cohérence scientifique du document
+avant soumission. Il est consulté (C) sur les activités à fort enjeu de choix
+technologiques (LLM, schéma de données, modélisation), où son expertise guide les
+décisions de conception. Le jury assume le rôle d'approbateur exclusif (A) lors de la
+soutenance, moment où il évalue souverainement la qualité de l'ensemble du travail.
+
+## Gestion des Risques
+
+### Registre des Risques
+
+Huit risques ont été identifiés lors de la phase de planification. Chaque risque est
+évalué sur une échelle de 1 à 5 pour sa probabilité d'occurrence et son impact sur
+les objectifs du projet. Le score de criticité est le produit des deux dimensions.
+
+| ID | Risque | Catégorie | Probabilité | Impact | Score | Priorité |
+|----|--------|-----------|:-----------:|:------:|:-----:|:--------:|
+| R1 | Instabilité des APIs externes (OpenRouter, CDX, Yahoo Finance) — coupure ou changement d'interface | Technique | 4 | 5 | **20** | Critique |
+| R2 | Performances du modèle ML insuffisantes pour démontrer la valeur ajoutée | Scientifique | 3 | 5 | **15** | Critique |
+| R3 | Dépassement du délai de rédaction du rapport | Managérial | 4 | 4 | **16** | Élevé |
+| R4 | Volume de corpus insuffisant — couverture temporelle trop faible pour entraîner le modèle | Données | 3 | 4 | **12** | Élevé |
+| R5 | Dérive du périmètre (feature creep) — ajout non planifié de fonctionnalités | Managérial | 4 | 3 | **12** | Élevé |
+| R6 | Surcharge de la machine locale lors de l'exécution simultanée d'Ollama et de Docker | Infrastructure | 2 | 3 | **6** | Modéré |
+| R7 | Indisponibilité ou changement de structure de sources RSS | Données | 4 | 2 | **8** | Modéré |
+| R8 | Incompatibilités de versions entre bibliothèques Python (LangChain, scikit-learn) | Technique | 3 | 2 | **6** | Faible |
+
+*Échelle : Probabilité et Impact de 1 (très faible) à 5 (très élevé). Score = Probabilité × Impact.*
+
+### Matrice Probabilité / Impact
+
+La figure suivante positionne chaque risque dans la matrice probabilité × impact.
+Les risques en zone rouge (score ≥ 12) requièrent un plan de mitigation actif ;
+les risques en zone orange (score 6–11) font l'objet d'une surveillance ; les risques
+en zone verte (score ≤ 5) sont acceptés avec suivi minimal.
+
+```{mermaid}
+quadrantChart
+    title Matrice Probabilité / Impact des Risques
+    x-axis "Faible Impact" --> "Impact Élevé"
+    y-axis "Faible Probabilité" --> "Probabilité Élevée"
+    quadrant-1 "Surveiller activement"
+    quadrant-2 "Zone critique — Mitiger"
+    quadrant-3 "Accepter / Surveiller"
+    quadrant-4 "Mitiger si possible"
+    R1 APIs externes: [0.85, 0.75]
+    R2 Perf. modèle ML: [0.85, 0.55]
+    R3 Délai rapport: [0.75, 0.75]
+    R4 Corpus insuffisant: [0.75, 0.55]
+    R5 Feature creep: [0.55, 0.75]
+    R6 Surcharge machine: [0.55, 0.35]
+    R7 Sources RSS: [0.35, 0.75]
+    R8 Incompatibilités: [0.35, 0.55]
+```
+
+### Analyse Pareto (Principe 80/20)
+
+L'analyse Pareto identifie les risques qui concentrent la majorité de l'exposition
+globale. Le score cumulatif total de l'ensemble des risques est de **95 points**.
+
+| Rang | Risque | Score | Cumulé | % cumulé |
+|------|--------|:-----:|:------:|:--------:|
+| 1 | R1 — Instabilité APIs externes | 20 | 20 | 21,1 % |
+| 2 | R3 — Dépassement délai rapport | 16 | 36 | 37,9 % |
+| 3 | R2 — Performances modèle ML | 15 | 51 | 53,7 % |
+| 4 | R4 — Corpus insuffisant | 12 | 63 | 66,3 % |
+| 5 | R5 — Feature creep | 12 | 75 | 78,9 % |
+| 6 | R7 — Sources RSS | 8 | 83 | 87,4 % |
+| 7 | R6 — Surcharge machine | 6 | 89 | 93,7 % |
+| 8 | R8 — Incompatibilités Python | 6 | 95 | 100,0 % |
+
+L'application du principe de Pareto révèle que **les cinq premiers risques (62 % des
+risques identifiés) représentent 78,9 % de l'exposition cumulée**. Ces cinq risques —
+instabilité des APIs, dépassement du délai de rédaction, performances du modèle, volume
+de corpus et dérive de périmètre — constituent les priorités de mitigation décrites
+dans la section suivante.
+
+### Plans de Mitigation et de Contingence
+
+**R1 — Instabilité des APIs externes (Score : 20 — Critique)**
+
+*Mitigation :* Implémentation d'un mécanisme de retry avec backoff exponentiel (3 tentatives,
+délais 5s/10s/20s) pour tous les appels vers des services tiers. Maintien d'un double
+mode d'analyse LLM : Ollama local (mode hors-ligne) et OpenRouter (cloud), avec bascule
+automatique en cas d'échec. L'Internet Archive CDX est consulté hors-ligne sur des
+fenêtres temporelles pré-indexées. Pour Yahoo Finance, un cache local Parquet des données
+de commodités est maintenu et rechargé en cas d'indisponibilité.
+
+*Contingence :* En cas de panne prolongée d'OpenRouter, le pipeline RSS bascule
+intégralement sur Ollama local avec LLaMA 3.1 8B. Les DAGs Airflow journalisent chaque
+échec dans la table SQLite de monitoring, permettant une relance ciblée des articles
+manquants.
+
+**R3 — Dépassement du délai de rédaction (Score : 16 — Élevé)**
+
+*Mitigation :* La rédaction démarre dès le Sprint 3 (mi-décembre 2025), en parallèle
+des sprints 4 et 5, selon un planning détaillé chapitre par chapitre. Un point de revue
+hebdomadaire avec l'encadrant permet de détecter les retards dès la première semaine
+de dépassement. La génération des figures est automatisée via des scripts Python
+(`generate_figures/`) exécutables en moins de cinq minutes, éliminant le risque
+d'une mise en forme manuelle tardive.
+
+*Contingence :* En cas de retard avéré, les sections à faible valeur ajoutée (annexes,
+dictionnaire de données) sont allégées ou différées, en accord avec l'encadrant.
+
+**R2 — Performances du modèle ML insuffisantes (Score : 15 — Critique)**
+
+*Mitigation :* La baseline est définie dès le départ (classificateur majoritaire à 52 %),
+fixant un seuil minimal à dépasser. L'évaluation porte sur plusieurs métriques
+complémentaires (précision, AUC-ROC, Spearman) pour éviter qu'une seule métrique
+défavorable ne disqualifie le modèle. Le cadre de backtesting financier offre une
+validation économique indépendante des métriques de classification.
+
+*Contingence :* Si les performances du classificateur ne dépassent pas la baseline,
+le régresseur et le backtesting constituent un argument alternatif suffisant pour
+démontrer la valeur du signal LLM (corrélation de Spearman significative + ratio
+de Sharpe supérieur au benchmark).
+
+**R4 — Volume de corpus insuffisant (Score : 12 — Élevé)**
+
+*Mitigation :* Le module de backfill CDX couvre huit domaines de presse sur plusieurs
+années, garantissant un corpus historique indépendant du délai de collecte RSS en
+production. Les données historiques OHLCV (76 fichiers CSV par société cotée) fournissent
+une base de prix complète depuis l'introduction en bourse de chaque titre.
+
+*Contingence :* Si le corpus textuel s'avère insuffisant pour certains titres peu
+médiatisés, la stratégie de modélisation est adaptée : entraînement sur l'ensemble
+des données cross-ticker plutôt que par titre individuel, et filtrage explicite des
+titres sous le seuil de soixante jours d'historique.
+
+**R5 — Dérive du périmètre (Score : 12 — Élevé)**
+
+*Mitigation :* Le périmètre du projet est figé en fin de Sprint 2 via un tableau
+de cadrage (charte projet) validé avec l'encadrant. Toute évolution fonctionnelle
+est soumise à une analyse d'impact sur le planning avant d'être acceptée. Les nouvelles
+idées sont consignées dans un backlog distinct pour intégration en V2.
+
+*Contingence :* Si une fonctionnalité essentielle non planifiée émerge, elle est
+traitée comme un sprint de maintenance de deux jours maximum, avec ajustement compensatoire
+sur les tâches de moindre priorité.
+
+## Outils de Pilotage et de Suivi
+
+### Tableau de Bord de Suivi
+
+| Indicateur | Fréquence | Méthode de mesure | Seuil d'alerte |
+|-----------|:---------:|-------------------|----------------|
+| Avancement sprint (% tâches terminées) | Hebdomadaire | Git commits + marqueurs de livraison | < 70 % à mi-sprint |
+| Volume d'articles collectés / analysés | Quotidien | Dashboard Streamlit (page Runs) | < 50 articles/jour |
+| Taux d'échec du pipeline LLM | À chaque run | Table SQLite `pipeline_runs` | > 10 % d'échecs |
+| Lignes gold `daily_signals` | Hebdomadaire | `SELECT COUNT(*) FROM gold.daily_signals` | Stagnation > 3 jours |
+| Pages du rapport rédigées | Hebdomadaire | Comptage Quarto (pages DOCX) | < 5 pages/semaine |
+
+### Outils Utilisés
+
+| Outil | Rôle dans le projet | Lien avec les livrables |
+|-------|--------------------|-----------------------|
+| **Git / GitHub** | Versionnement du code source et du rapport | Historique complet de chaque sprint |
+| **VS Code** | IDE principal (Python, Quarto, YAML) | Développement et rédaction |
+| **Docker Desktop** | Gestion des conteneurs d'infrastructure | PostgreSQL, Neo4j, MinIO, Dashboard |
+| **Jupyter Lab** | Exploration de données et prototypage ML | Notebooks `signal_pipeline/` |
+| **Apache Airflow UI** | Supervision des DAGs en production | Logs d'exécution, relances manuelles |
+| **PgAdmin** | Inspection des tables PostgreSQL | Validation des insertions silver/gold |
+| **Streamlit Dashboard** | Supervision opérationnelle en temps réel | Pages Runs, Live, Stock Prices |
+
+Les points de revue avec l'encadrant sont tenus **toutes les deux semaines**, selon
+un format structuré : (1) démo des livrables du sprint écoulé, (2) lecture des métriques
+de collecte et de modélisation, (3) validation du planning du sprint suivant.
+
+## Critères de Réussite du Projet
+
+### KPIs Techniques
+
+| KPI | Définition | Valeur cible | Résultat obtenu |
+|-----|-----------|:------------:|:---------------:|
+| Précision classificateur | Accuracy sur ensemble de test (split temporel) | > 55 % | **57,2 %** ✅ |
+| AUC-ROC | Aire sous la courbe ROC (discriminance du modèle) | > 0,55 | **0,61** ✅ |
+| Ratio de Sharpe (S1) | Rendement/risque de la stratégie classificateur | > 0,5 | **0,72** ✅ |
+| Drawdown max. (S1) | Perte maximale depuis le point haut | < 15 % | **−9,2 %** ✅ |
+| Couverture des sources | Nombre de flux RSS actifs et stables | ≥ 10 | **13** ✅ |
+| Latence LLM (cloud) | Temps d'analyse par article (OpenRouter) | < 30 s | **~15 s** ✅ |
+| Fraîcheur des données | Délai collecte → analyse (pipeline horaire) | < 2 h | **~1 h** ✅ |
+| Features gold par (ticker, date) | Nombre de colonnes dans `daily_signals` | ≥ 60 | **~80** ✅ |
+
+### KPIs Managériaux et Entrepreneuriaux
+
+| KPI | Valeur cible | Résultat obtenu |
+|-----|:------------:|:---------------:|
+| Durée de développement | ≤ 7 mois | **7 mois** ✅ |
+| Volume du rapport PFA | 80–130 pages | En cours ✅ |
+| Nombre de modules implémentés | ≥ 6 modules distincts | **9 modules** ✅ |
+| Lignes de code fonctionnel | ≥ 1 500 LOC | **~2 500 LOC** ✅ |
+| Nombre de références bibliographiques | ≥ 15 | En cours |
+| Démo live lors de la soutenance | Système opérationnel démontrable | Prévu ✅ |
+
+L'ensemble des KPIs techniques ont été atteints ou dépassés. Le dépassement du KPI
+de features gold (+33 % au-dessus de la cible) reflète l'enrichissement itératif
+de la taxonomie d'événements au fil des sprints, qui a conduit à l'ajout de fenêtres
+temporelles et d'indicateurs one-hot supplémentaires.
+
+## Conclusion
+
+Ce chapitre a formalisé le cadre de management du projet selon les pratiques professionnelles.
+Le WBS décompose le projet en vingt-quatre livrables répartis sur cinq sprints techniques
+et une phase de rédaction, illustrant la progression incrémentale du système. Le diagramme
+de Gantt sur sept mois identifie le Sprint 3 (couche gold et orchestration Airflow) comme
+goulot d'étranglement structurel du chemin critique. La matrice RACI clarifie la répartition
+des rôles dans un projet individuel entre l'étudiant, l'encadrant et le jury. Le registre
+des risques et l'analyse Pareto permettent de concentrer l'effort de mitigation sur les
+cinq risques qui représentent 78,9 % de l'exposition totale, avec des plans de contingence
+concrets pour les trois risques les plus critiques. Enfin, les KPIs techniques et managériaux
+confirment que les objectifs initiaux ont été atteints ou dépassés, posant les bases
+d'une démonstration convaincante lors de la soutenance.
+
+La conception architecturale détaillée du système est présentée dans le chapitre suivant.

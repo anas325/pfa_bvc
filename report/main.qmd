@@ -57,6 +57,10 @@ bibliography: bibliographie.bib
 
 {{< pagebreak >}}
 
+{{< include partie1/chapitre_management_projet.qmd >}}
+
+{{< pagebreak >}}
+
 {{< include partie1/chapitre3_conception.qmd >}}
 
 {{< pagebreak >}}
