@@ -73,6 +73,10 @@ bibliography: bibliographie.bib
 
 {{< pagebreak >}}
 
+{{< include partie1/chapitre_viabilite.qmd >}}
+
+{{< pagebreak >}}
+
 {{< include partie1/conclusion_partie.qmd >}}
 
 {{< pagebreak >}}

@@ -1,0 +1,441 @@
+# Viabilité, Faisabilité et Modèle Économique
+
+## Introduction
+
+Ce chapitre évalue la viabilité globale du projet selon trois dimensions complémentaires :
+la faisabilité technique (ressources matérielles et coûts de production), la faisabilité
+commerciale (proposition de valeur, segmentation et stratégie de mise sur le marché),
+et la faisabilité financière (structure de coûts, seuil de rentabilité et projections).
+Il présente ensuite le modèle économique sous la forme du Business Model Canvas (BMC),
+les enjeux de conformité légale (loi 09-08 / RGPD), et la feuille de route d'évolution
+du produit de la version actuelle (V1) vers les versions futures (V2, V3).
+
+## Business Model Canvas
+
+Le Business Model Canvas (BMC) formalise les neuf composantes du modèle économique
+de la plateforme de veille financière selon la méthode d'Osterwalder.
+
+### Segments de Clientèle
+
+La solution cible trois segments prioritaires distincts par leurs besoins et leur solvabilité :
+
+| Segment | Profil | Besoin principal | Potentiel |
+|---------|--------|-----------------|-----------|
+| **Institutionnels** | Gérants OPCVM, analystes *buy-side*, *trading desks* bancaires | Signaux prédictifs quotidiens, alertes en temps réel | Élevé — > 120 fonds actifs sur la BVC |
+| **Fintechs & startups** | Plateformes d'investissement marocaines émergentes (robo-advisors) | API de données sémantiques et scores de sentiment | Moyen — marché en émergence |
+| **Académiques & presse** | Chercheurs en finance computationnelle, journalistes économiques | Accès au corpus historique, analyses de tendance | Faible en revenus, fort en légitimité |
+
+Le segment institutionnel représente le marché adressable primaire (SAM) avec
+environ 120 fonds collectifs (OPCVM) et 17 sociétés de bourse agréées sur la BVC.
+Si seulement 5 % de ces acteurs souscrivent au plan Pro, cela représente 6 à 7 clients,
+suffisant pour atteindre le seuil de rentabilité dès la première année.
+
+### Proposition de Valeur
+
+La proposition de valeur centrale est d'offrir aux professionnels de la finance marocaine
+ce que Bloomberg et Reuters ne proposent pas à coût abordable : **une veille sémantique
+automatisée, francophone et arabophone, spécialisée sur les 76 sociétés cotées de la BVC,
+enrichie de signaux prédictifs journaliers et d'un backtesting intégré.**
+
+| Dimension | Ce que nous apportons | Ce que la concurrence ne peut pas offrir |
+|-----------|----------------------|------------------------------------------|
+| Spécialisation BVC | 76 tickers, secteurs AMMC, données OHLCV locales | Bloomberg couvre la BVC superficiellement |
+| Langue | Français et arabe marocain | FinBERT est anglophone uniquement |
+| Coût | < 300 MAD/mois (plan Pro) | Bloomberg Terminal : ~250 000 MAD/an |
+| Intégration verticale | Collecte → LLM → gold → signal → backtest | Aucun outil local offre cette chaîne complète |
+| Transparence | Code open-source, DAG logs Airflow, PipelineLogger | Boîtes noires propriétaires |
+
+### Canaux de Distribution
+
+- **Accès direct en ligne** : tableau de bord Streamlit hébergé, accessible par URL
+  après authentification. Canal privilégié pour la démonstration et les abonnements individuels.
+- **API REST** (roadmap V2) : canal B2B permettant aux fintechs et courtiers d'intégrer
+  les signaux directement dans leurs propres plateformes.
+- **Démo académique / conférence** : présentation à EMSI et à des événements FinTech
+  marocains (Hub Africa, Africa FinTech Summit) pour la notoriété initiale.
+- **GitHub Open Source** : publication du code sous licence MIT pour attirer la communauté
+  développeur et susciter des contributions et des partenariats.
+
+### Relations Clients
+
+- **Libre-service SaaS** : inscription en ligne, prise en main autonome via documentation
+  et tutoriels vidéo. Adapté aux fintechs et aux chercheurs.
+- **Accompagnement pro** : pour les institutionnels, un onboarding personnalisé (définition
+  des alertes, paramétrage des secteurs surveillés) est proposé lors de la première semaine.
+- **Support asynchrone** : canal email + FAQ publique. Pas de support téléphonique en phase initiale.
+
+### Flux de Revenus
+
+| Plan | Prix mensuel | Inclus | Segment cible |
+|------|:-----------:|--------|---------------|
+| **Gratuit** | 0 MAD | 5 recherches/jour, données J-7, 3 tickers surveillés | Académiques, journalistes |
+| **Pro** | 299 MAD | Accès illimité, données temps réel, export CSV, 20 alertes | Analystes individuels, fintechs |
+| **Enterprise** | Sur devis (~1 500 MAD) | API REST, SLA 99,5 %, onboarding, rapport mensuel personnalisé | Banques, OPCVM, courtiers |
+| **Consulting** | Au projet | Déploiement on-premise, fine-tuning modèle, intégration SI | Grandes institutions |
+
+Le modèle freemium réduit la barrière à l'essai tout en créant un entonnoir naturel
+vers les plans payants. La conversion attendue freemium → Pro est estimée à 8–12 %,
+cohérente avec les benchmarks SaaS B2B de niche.
+
+### Ressources Clés
+
+| Ressource | Description | Criticité |
+|-----------|-------------|:---------:|
+| **Corpus de presse (actif de données)** | ~50 000 articles collectés (2020–2025), enrichis et annotés | Critique |
+| **Code Python (pipeline)** | ~2 500 lignes de code, 9 modules, DAGs Airflow | Critique |
+| **Modèles ML entraînés** | RF Classificateur + RF Régresseur sauvegardés (joblib) | Élevée |
+| **Infrastructure Docker** | docker-compose.yml, images PG + Neo4j + MinIO + Streamlit | Élevée |
+| **Réseau de sources RSS** | 13 flux actifs, scrapers LeMatin et Challenge | Élevée |
+| **Expertise LLM Finance** | Savoir-faire en prompt engineering et évaluation de sentiment financier | Moyenne |
+
+### Activités Clés
+
+- **Collecte et analyse quotidienne** : exécution automatique des 4 DAGs Airflow (RSS,
+  prix boursiers, taux de change, couche gold).
+- **Maintenance du pipeline** : surveillance des sources RSS, mise à jour des scrapers
+  lors des changements de structure HTML, gestion des erreurs LLM.
+- **Ré-entraînement périodique du modèle** : réentraînement mensuel sur le corpus enrichi
+  pour intégrer les nouveaux articles et maintenir la performance prédictive.
+- **Développement produit** : ajout de fonctionnalités (alertes, API, ESG scoring)
+  selon la roadmap.
+
+### Partenaires Clés
+
+| Partenaire | Apport | Risque de dépendance |
+|-----------|--------|:--------------------:|
+| **Éditeurs de presse marocaine** (LeMatin, Challenge, Médias24) | Flux RSS et droits d'utilisation éditoriale | Élevé — mitigation par diversification |
+| **OpenRouter / Meta (LLaMA)** | Accès LLM cloud et modèle open-source | Moyen — mitigation par mode Ollama local |
+| **Yahoo Finance** | Données OHLCV historiques gratuites | Moyen — mitigation par cache Parquet |
+| **Courtiers BVC agréés** | Distribution commerciale, légitimité réglementaire | Faible à ce stade |
+| **EMSI** | Validation académique, premier réseau de démonstration | Faible |
+
+### Structure de Coûts
+
+| Poste | Coût mensuel estimé | Nature |
+|-------|:-------------------:|--------|
+| Hébergement VPS (4 vCPU, 16 Go RAM) — OVH ou DigitalOcean | 250 MAD | Fixe |
+| Nom de domaine + certificat SSL | 15 MAD | Fixe |
+| API OpenRouter (LLM cloud, ~50 articles/jour) | 5 MAD | Variable (quasi nul) |
+| Maintenance pipeline (10 h/mois × 150 MAD/h) | 1 500 MAD | Semi-fixe |
+| Marketing et communication (LinkedIn, démos) | 100 MAD | Variable |
+| **Total charges mensuelles (phase amorçage)** | **1 870 MAD** | |
+
+Les coûts variables sont structurellement très faibles (principalement les tokens LLM
+OpenRouter), car LLaMA 3.1 8B via Ollama est disponible en mode local à coût nul.
+En production avec 100 utilisateurs actifs, les coûts variables LLM resteraient
+inférieurs à 50 MAD/mois grâce au mode local, ce qui garantit une marge opérationnelle
+élevée dès l'atteinte du seuil de rentabilité.
+
+### Synthèse du BMC
+
+```{mermaid}
+graph TD
+    subgraph INFRA ["🔧 Infrastructure"]
+        PK["Partenaires clés\nÉditeurs RSS\nOpenRouter\nYahoo Finance"]
+        AK["Activités clés\nCollecte RSS quotidienne\nAnalyse LLM\nRé-entraînement modèle"]
+        RK["Ressources clés\nCorpus 50K articles\nPipeline Python\nModèles ML"]
+    end
+    subgraph MARCHE ["🎯 Marché"]
+        RC["Relations clients\nLibre-service SaaS\nOnboarding Pro\nSupport email"]
+        CA["Canaux\nTableau de bord Streamlit\nAPI REST (V2)\nGitHub open-source"]
+        SC["Segments clients\nInstitutionnels BVC\nFintechs marocaines\nAcadémiques / Presse"]
+    end
+    subgraph VALEUR ["💡 Valeur"]
+        PV["Proposition de valeur\nVeille BVC fr/ar\nSignaux prédictifs\n< 300 MAD/mois"]
+    end
+    subgraph FINANCES ["💰 Finances"]
+        CT["Coûts\n~1 870 MAD/mois\n(VPS + maintenance)"]
+        FR["Revenus\nFreemium → Pro (299 MAD)\nEnterprise (~1 500 MAD)\nConsulting"]
+    end
+    PK --> PV
+    AK --> PV
+    RK --> PV
+    PV --> RC
+    PV --> CA
+    RC --> SC
+    CA --> SC
+    CT -.- FR
+```
+
+## Étude de Faisabilité Technique
+
+### Ressources Matérielles
+
+La solution fonctionne actuellement sur une machine locale Windows 11 avec WSL2 pour
+Airflow. Pour une mise en production, les spécifications minimales d'un serveur dédié
+sont les suivantes :
+
+| Composant | Spécification minimale (production) | Justification |
+|-----------|:------------------------------------|---------------|
+| Processeur | 4 vCPU (x86-64) | Airflow + Docker + pipeline Python concurrent |
+| Mémoire RAM | 16 Go | Neo4j (4 Go), PostgreSQL (2 Go), Ollama (8 Go si local) |
+| Stockage | 100 Go SSD NVMe | Articles (texte), données OHLCV, modèles ML |
+| Réseau | 1 Gbit/s | Collecte RSS + requêtes API |
+| OS | Ubuntu 22.04 LTS | Docker natif, compatibilité Airflow |
+
+En mode cloud LLM (OpenRouter uniquement, sans Ollama local), la RAM peut être réduite
+à 8 Go, divisant par deux le coût d'hébergement.
+
+### Estimation des Coûts Techniques
+
+| Scénario | Infrastructure | LLM | Total/mois | Total/an |
+|----------|:--------------:|:---:|:----------:|:--------:|
+| **Développement local** (actuel) | Machine personnelle | Ollama local (0 MAD) | 0 MAD | 0 MAD |
+| **Production cloud** (moyen terme) | VPS 4 vCPU / 16 Go RAM : 250 MAD | OpenRouter : 5–50 MAD | ~300 MAD | ~3 600 MAD |
+| **Production scalable** (long terme) | Kubernetes 3 nœuds : 800 MAD | Mix Ollama + OpenRouter : 50 MAD | ~850 MAD | ~10 200 MAD |
+
+La trajectoire de coûts techniques est maîtrisée : le passage du développement local
+à la production cloud n'exige qu'un investissement mensuel de 250–300 MAD, soit
+l'équivalent d'un abonnement Pro. La solution devient auto-finançable dès le premier client
+payant au plan Enterprise.
+
+### Maturité Technologique
+
+| Technologie | Maturité | Risque | Mitigation |
+|-------------|:--------:|:------:|-----------|
+| Python 3.12 + uv | Production | Faible | Standard industrie |
+| PostgreSQL 16 | Production | Faible | Utilisé par ~40 % des entreprises |
+| Apache Airflow 2.x | Production | Faible | Standard orchestration données |
+| Neo4j 5.x | Production | Moyen | Alternative : PostgreSQL graph ext. |
+| LLaMA 3.1 8B (Ollama) | Mature | Moyen | Remplacement par version suivante facile |
+| Streamlit 1.x | Production | Faible | Migration possible vers FastAPI + React |
+| Docker Compose | Production | Faible | Migration Kubernetes si scale nécessaire |
+
+L'ensemble de la stack technologique utilise des composants matures et activement
+maintenus. Le risque technologique résiduel le plus élevé concerne l'évolution rapide
+des LLM : le remplacement de LLaMA 3.1 par une version plus performante ne nécessite
+qu'un changement de paramètre dans `rss_feeds.yaml`, grâce au protocole d'abstraction
+`ArticleAnalyzer` défini dans le module `rss/analyzer.py`.
+
+## Étude de Faisabilité Commerciale
+
+### Stratégie 4P
+
+**Produit (Product)**
+
+La plateforme est conçue selon une architecture de produit SaaS en trois couches :
+
+- **Couche données** : corpus d'articles, données OHLCV, taux de change BKAM, commodités
+  Yahoo Finance — constituant l'actif de données différenciant.
+- **Couche intelligence** : LLM analyzer (sentiment, entités, événements), modèle RF
+  prédictif, backtesting financier — générant les signaux à valeur ajoutée.
+- **Couche présentation** : tableau de bord Streamlit (4 pages) + exports CSV + API REST
+  (V2) — interfaces d'accès pour les différents segments.
+
+La différenciation principale est la spécialisation BVC : aucun concurrent ne propose
+cette combinaison de couverture locale + analyse sémantique + signal prédictif à ce niveau
+de granularité.
+
+**Prix (Price)**
+
+La grille tarifaire adopte un modèle freemium avec trois paliers :
+
+| Plan | Prix | Positionnement |
+|------|:----:|----------------|
+| Gratuit | 0 MAD | Acquisition d'utilisateurs, légitimité académique |
+| Pro | **299 MAD/mois** | Analystes individuels, fintechs — prix psychologique inférieur à 30 € |
+| Enterprise | **~1 500 MAD/mois** | Institutions — prix 5× le plan Pro, valeur justifiée par SLA + API |
+
+Le plan Pro est positionné à 299 MAD (≈ 27 €/mois), soit moins de 1 % du coût annuel
+d'un terminal Bloomberg (~25 000 $/an). Cette asymétrie de prix constitue l'argument
+commercial central sur le marché marocain.
+
+**Distribution (Place)**
+
+La distribution initiale repose sur la vente directe en ligne (auto-inscription sur le
+site web) et sur les démonstrations physiques lors d'événements FinTech marocains. À moyen
+terme (V2), un réseau de courtiers agréés BVC peut servir de canal de distribution B2B,
+en échange d'une commission sur les abonnements Enterprise référencés.
+
+**Promotion (Promotion)**
+
+| Action | Canal | Coût | Délai |
+|--------|-------|:----:|-------|
+| Publication GitHub open-source + README | GitHub | 0 MAD | Immédiat |
+| Article académique (RIST ou JESA) | Revue scientifique | 0 MAD | +6 mois |
+| Démo aux journées EMSI + réseaux alumni | Présentiel | 0 MAD | +1 mois |
+| Posts LinkedIn (analyses marché BVC) | LinkedIn | 0 MAD | Immédiat |
+| Présentation à Africa FinTech Summit | Conférence | 1 000–2 000 MAD inscription | +12 mois |
+
+La stratégie de promotion privilégie les canaux à coût nul en phase d'amorçage,
+en misant sur la crédibilité académique (rapport PFA, publication scientifique) et
+la visibilité communautaire (GitHub, LinkedIn) pour générer les premiers leads organiques.
+
+## Étude de Faisabilité Financière
+
+### Structure de Coûts et Hypothèses
+
+| Poste | Mensuel | Annuel | Nature |
+|-------|:-------:|:------:|--------|
+| VPS production (OVH ou DigitalOcean) | 250 MAD | 3 000 MAD | Fixe |
+| Domaine + SSL | 15 MAD | 180 MAD | Fixe |
+| API LLM (OpenRouter) | 10 MAD | 120 MAD | Variable |
+| Maintenance pipeline (10 h × 150 MAD/h) | 1 500 MAD | 18 000 MAD | Semi-fixe |
+| Marketing et outils (Notion, email) | 100 MAD | 1 200 MAD | Variable |
+| **Total charges** | **1 875 MAD** | **22 500 MAD** | |
+
+*Note : la maintenance est valorisée au taux horaire junior d'un développeur data
+marocain (100–200 MAD/h). En phase de maturité, cet effort est réduit à 5 h/mois
+par automatisation croissante des tâches de monitoring.*
+
+### Calcul du Seuil de Rentabilité
+
+Le seuil de rentabilité est atteint quand le chiffre d'affaires mensuel couvre les
+charges totales.
+
+$$\text{Seuil (clients Pro)} = \frac{\text{Charges fixes mensuelles}}{\text{Prix plan Pro}} = \frac{1\,875}{299} \approx 6{,}3$$
+
+**Il suffit de 7 clients au plan Pro pour couvrir l'intégralité des charges mensuelles.**
+Un seul client Enterprise (1 500 MAD) couvre 80 % des charges à lui seul.
+
+En combinant les deux plans :
+
+$$\text{CA}_{\text{équilibre}} = n_{\text{Pro}} \times 299 + n_{\text{Ent}} \times 1\,500 \geq 1\,875 \text{ MAD}$$
+
+Exemple d'atteinte du seuil : 3 clients Pro + 1 client Enterprise = 897 + 1 500 = 2 397 MAD > 1 875 MAD ✅
+
+### Projections Financières sur 24 Mois
+
+Les projections distinguent deux scénarios : **S1 (conservateur)** basé sur
+l'acquisition organique uniquement, et **S2 (optimiste)** incluant un partenariat
+avec un courtier BVC référençant la plateforme à ses clients institutionnels.
+
+| Période | S1 — Clients Pro | S1 — CA (MAD) | S1 — Résultat | S2 — Clients Pro | S2 — CA (MAD) | S2 — Résultat |
+|---------|:----------------:|:-------------:|:-------------:|:----------------:|:-------------:|:-------------:|
+| M1–M3 (lancement) | 0 | 0 | **−5 625** | 0 | 0 | **−5 625** |
+| M4–M6 (amorçage) | 3 | 897 | **−2 931** | 5 + 1 Ent. | 2 995 | **+360** |
+| M7–M9 (croissance) | 8 | 2 392 | **+1 549** | 12 + 2 Ent. | 6 588 | **+13 863** |
+| M10–M12 (consolidation) | 15 | 4 485 | **+7 710** | 20 + 3 Ent. | 10 480 | **+25 815** |
+| M13–M18 (maturité) | 25 | 7 475 | **+34 200** | 35 + 5 Ent. | 17 965 | **+72 540** |
+| M19–M24 (scale) | 40 | 11 960 | **+61 050** | 60 + 8 Ent. | 29 940 | **+135 390** |
+
+*Résultats cumulés. Charges fixes mensuelles : 1 875 MAD. Taux de TVA non inclus (hors périmètre PFA).*
+
+Le scénario conservateur S1 atteint le point d'équilibre mensuel en **mois 7–8**,
+après six mois de pertes cumulées de 8 500 MAD environ (équivalent à 57 heures
+de maintenance valorisées). Le scénario optimiste S2, conditionné à l'obtention
+d'un partenariat courtier avant le mois 4, atteint la rentabilité mensuelle dès
+le deuxième semestre.
+
+### Retour sur Investissement Estimé
+
+En scénario S1, l'investissement initial (temps de développement estimé à 560 heures
+× 50 MAD/h coût opportunité = 28 000 MAD) est récupéré en **18–24 mois** de revenus
+Pro nets. En scénario S2, ce délai est ramené à **12–15 mois**. Ces estimations confirment
+la viabilité financière de la solution dans un horizon de deux ans sans financement externe.
+
+## Conformité Légale et Protection des Données
+
+### Application de la Loi 09-08 (Équivalent Marocain du RGPD)
+
+La loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement
+des données à caractère personnel s'applique à tout système traitant des données
+identifiantes. L'analyse de la solution conduit aux conclusions suivantes :
+
+| Catégorie de donnée traitée | Nature | Qualification 09-08 | Traitement |
+|-----------------------------|--------|:-------------------:|-----------|
+| Articles de presse (texte intégral) | Données éditoriales publiques | Hors champ (données publiques) | Collecte et analyse autorisées |
+| Tickers et noms de sociétés | Données d'entités morales | Hors champ (personnes morales) | Traitement sans restriction |
+| Mentions nominatives dans articles | Données de personnes physiques dans contexte public | **Données personnelles — traitement limité** | Stockage du contexte éditorial uniquement, pas de profilage |
+| Données utilisateurs (abonnés SaaS) | E-mail, nom, historique de navigation | **Données personnelles sensibles** | Consentement explicite, chiffrement, droit d'effacement |
+
+**Mesures de conformité implémentées dans V1 :**
+
+1. **Non-stockage des données personnelles nominatives** hors contexte éditorial : les
+   mentions de noms de dirigeants dans les articles sont stockées uniquement comme métadonnées
+   de l'article, sans constitution d'un profil individuel.
+2. **Politique de rétention des articles** : les articles sont conservés 3 ans maximum
+   à des fins d'entraînement des modèles, puis archivés hors ligne.
+3. **Absence de cookies tiers** sur le tableau de bord Streamlit V1 : aucun traceur
+   analytique tiers n'est intégré.
+4. **Déclaration CNDP** : lors d'une mise en production commerciale, une déclaration
+   préalable auprès de la Commission Nationale de contrôle de la protection des Données
+   à caractère Personnel (CNDP) sera requise pour le traitement des données utilisateurs abonnés.
+
+### Droits d'Auteur et Utilisation des Contenus
+
+Le scraping d'articles de presse soulève des questions de droit d'auteur. La solution
+adopte les mesures préventives suivantes :
+
+- **Stockage des métadonnées uniquement** (titre, URL, date, auteur) pour les articles
+  dont le texte intégral n'est pas nécessaire à l'analyse.
+- **Analyse en mémoire** : le texte intégral est chargé, analysé par le LLM, puis seul
+  le résultat structuré (sentiment, entités, événements) est persisté — non le texte original.
+- **Respect du `robots.txt`** : le scraper Scrapy est configuré pour respecter les
+  directives `robots.txt` de chaque domaine (`ROBOTSTXT_OBEY = True` dans `settings.py`).
+- **Volume limité** : le backfill CDX est limité à 8 domaines de presse marocaine sur
+  des fenêtres temporelles précises, sans saturation des serveurs sources.
+
+## Feuille de Route Produit
+
+### V1 — Version Académique (Actuelle)
+
+La version V1 est celle développée dans le cadre du présent PFA. Elle constitue la
+preuve de concept complète du système, de la collecte au tableau de bord.
+
+| Composant | Statut | Fonctionnalité |
+|-----------|:------:|----------------|
+| Pipeline RSS (13 sources) | ✅ Livré | Collecte, scraping, analyse LLM, chargement Neo4j |
+| Couche gold PostgreSQL | ✅ Livré | 5 tables, ~80 features par (ticker, date) |
+| 4 DAGs Airflow | ✅ Livré | RSS, OHLCV, BKAM, gold — orchestration automatique |
+| Modèles ML (RF Classificateur + Régresseur) | ✅ Livré | Précision 57,2 %, AUC-ROC 0,61 |
+| Backtesting (3 stratégies vs MASI) | ✅ Livré | Sharpe 0,72, rendement cumulatif +18,4 % |
+| Tableau de bord Streamlit (4 pages) | ✅ Livré | Overview, Runs, Live, Stock Prices |
+
+### V2 — Version Commerciale (+6 à +12 mois)
+
+La V2 fait évoluer la preuve de concept vers un produit commercial minimal viable (MVP).
+
+| Fonctionnalité | Priorité | Impact |
+|----------------|:--------:|--------|
+| **API REST JSON** (FastAPI) exposant les signaux journaliers | Critique | Permet l'intégration B2B dans les plateformes tierces |
+| **Module d'alertes en temps réel** (websocket ou email) | Haute | Différenciant clé pour les institutionnels |
+| **Authentification utilisateurs** (OAuth 2.0) + plans d'abonnement | Critique | Condition sine qua non de la monétisation |
+| **Scoring ESG** : extraction des signaux environnementaux et de gouvernance | Moyenne | Aligne le produit avec les exigences AMMC RSE 2022 |
+| **Rapport PDF hebdomadaire** auto-généré par ticker | Haute | Valeur ajoutée immédiate pour les gérants |
+| **Extension à 5 sources arabophones** (Hespress Économie, Maroc Hebdo) | Moyenne | Enrichissement corpus, couverture arabophone |
+| **Modèle de coûts de transaction** dans le backtesting | Haute | Crédibilité des projections financières |
+
+### V3 — Version Régionale (+18 à +36 mois)
+
+La V3 étend la plateforme au-delà du marché marocain, visant les marchés boursiers
+africains francophones.
+
+| Axe d'expansion | Marché cible | Complexité |
+|-----------------|-------------|:----------:|
+| **BRVM** (Bourse Régionale des Valeurs Mobilières — Abidjan) | Afrique de l'Ouest francophone (8 pays, 45 sociétés) | Moyenne |
+| **Bourse d'Alger** | Algérie | Faible (sources françaises disponibles) |
+| **Nairobi Securities Exchange** | Afrique de l'Est anglophone | Élevée (modèle anglophone requis) |
+| **Fine-tuning LLM marocain** | Darija financière, dialecte économique | Élevée (corpus spécialisé nécessaire) |
+| **Recommandation de portefeuille** personnalisée | Tous marchés | Haute (réglementation MIF2 marocaine) |
+
+```{mermaid}
+flowchart LR
+    V1["V1 — Académique\n(Actuel)\n• Pipeline RSS + LLM\n• Gold layer + Airflow\n• RF + Backtesting\n• Streamlit 4 pages"]
+    V2["V2 — Commercial\n(+6 à +12 mois)\n• API REST (FastAPI)\n• Alertes temps réel\n• Auth + abonnements\n• ESG scoring\n• Rapport PDF hebdo"]
+    V3["V3 — Régional\n(+18 à +36 mois)\n• BRVM + Bourse Alger\n• LLM arabophone fin-tuné\n• Recommandation portefeuille\n• SaaS multi-marchés"]
+    V1 -->|"Monétisation\n(1er client Enterprise)"| V2
+    V2 -->|"Financement\n(revenus récurrents)"| V3
+```
+
+La progression V1 → V2 → V3 est conçue pour s'autofinancer : les revenus de la V2
+(abonnements Pro et Enterprise) financent le développement de la V3, éliminant le besoin
+de levée de fonds externe à court terme.
+
+## Conclusion
+
+Ce chapitre a démontré la viabilité multidimensionnelle du projet. La faisabilité
+technique est établie : une infrastructure VPS à 250 MAD/mois suffit à la production,
+et la stack open-source élimine tout coût de licence. La faisabilité commerciale est
+confirmée par un positionnement *blue ocean* dans le quadrant *spécialiste BVC /
+faible coût*, inaccessible à Bloomberg et Reuters. La faisabilité financière est prouvée
+par un seuil de rentabilité à **7 clients Pro** et un retour sur investissement
+en 18–24 mois. Le Business Model Canvas formalise un modèle freemium → Pro → Enterprise
+dont les flux de revenus couvrent largement les charges fixes dès le deuxième semestre
+d'exploitation. La conformité à la loi 09-08 est assurée par une politique de traitement
+minimal des données personnelles. Enfin, la roadmap V1 → V2 → V3 trace une trajectoire
+de croissance réaliste vers une plateforme de veille financière à l'échelle africaine.
+
+La Partie I du rapport est ainsi complète. La Partie II détaille l'implémentation
+technique du pipeline de données, la modélisation prédictive et les résultats du
+backtesting financier.
