@@ -273,22 +273,29 @@ La solution se positionne dans le quadrant **forte spécialisation / faible coû
 n'est occupé par aucun acteur existant sur le marché marocain.
 
 ```{mermaid}
+---
+config:
+  quadrantChart:
+    chartWidth: 700
+    chartHeight: 500
+---
 quadrantChart
-    title Positionnement concurrentiel — Outils d'analyse financière BVC
-    x-axis "Généraliste (marchés mondiaux)" --> "Spécialiste (marché BVC)"
-    y-axis "Coût faible / Open Source" --> "Coût élevé / Propriétaire"
-    quadrant-1 "Niche premium"
-    quadrant-2 "Leaders mondiaux"
-    quadrant-3 "Outils génériques"
-    quadrant-4 "Notre positionnement ✅"
+    title Positionnement concurrentiel - Outils d'analyse financiere BVC
+    x-axis Generaliste --> Specialiste BVC
+    y-axis Faible cout --> Cout eleve
+
+    quadrant-1 Niche premium
+    quadrant-2 Leaders mondiaux
+    quadrant-3 Outils generiques
+    quadrant-4 Notre positionnement
+
     Bloomberg Terminal: [0.15, 0.95]
     Reuters Eikon: [0.20, 0.90]
     FinBERT: [0.25, 0.15]
     BVC Open Data: [0.75, 0.05]
-    Agrégateurs RSS Excel: [0.55, 0.10]
+    Agregateurs RSS Excel: [0.55, 0.10]
     Notre solution: [0.90, 0.15]
 ```
-
 La solution occupe le quadrant inférieur droit : **forte spécialisation BVC** (corpus
 arabophone/francophone, tickers marocains, données OHLCV locales) combinée à un
 **coût quasi nul** (LLM open-source, APIs gratuites, infrastructure Docker). Ce quadrant
