@@ -112,6 +112,23 @@ services:
       - bvc_net
     restart: unless-stopped
 
+  dashboard_analytics:
+    build: ../Dashboard_Analytics
+    container_name: pfa_bvc_dashboard_analytics
+    ports:
+      - "0.0.0.0:8502:8501"
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DB: pfa_bvc
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+    depends_on:
+      - postgres
+    networks:
+      - bvc_net
+    restart: unless-stopped
+
   airflow-init:
     <<: *airflow-common
     restart: "no"
