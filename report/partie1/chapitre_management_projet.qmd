@@ -278,23 +278,22 @@ en zone verte (score ≤ 5) sont acceptés avec suivi minimal.
 
 ```{mermaid}
 quadrantChart
-    title Matrice Probabilité / Impact des Risques
-    x-axis "Faible Impact" --> "Impact Élevé"
-    y-axis "Faible Probabilité" --> "Probabilité Élevée"
-
-    quadrant-1 "Surveiller activement"
-    quadrant-2 "Zone critique — Mitiger"
-    quadrant-3 "Accepter / Surveiller"
-    quadrant-4 "Mitiger si possible"
-
-    "R1 - APIs externes": [0.85, 0.75]
-    "R2 - Perf. modèle ML": [0.85, 0.55]
-    "R3 - Délai rapport": [0.75, 0.75]
-    "R4 - Corpus insuffisant": [0.75, 0.55]
-    "R5 - Feature creep": [0.55, 0.75]
-    "R6 - Surcharge machine": [0.55, 0.35]
-    "R7 - Sources RSS": [0.35, 0.75]
-    "R8 - Incompatibilités": [0.35, 0.55]```
+    title Matrice Probabilite Impact des Risques
+    x-axis Faible Impact --> Impact Eleve
+    y-axis Faible Probabilite --> Probabilite Elevee
+    quadrant-1 Surveiller activement
+    quadrant-2 Zone critique Mitiger
+    quadrant-3 Accepter Surveiller
+    quadrant-4 Mitiger si possible
+    R1 APIs externes: [0.92, 0.82]
+    R2 Perf modele ML: [0.78, 0.58]
+    R3 Delai rapport: [0.65, 0.88]
+    R4 Corpus insuffisant: [0.92, 0.58]
+    R5 Feature creep: [0.52, 0.78]
+    R6 Surcharge machine: [0.62, 0.28]
+    R7 Sources RSS: [0.28, 0.68]
+    R8 Incompatibilites: [0.28, 0.48]
+                ```
 
 ### Analyse Pareto (Principe 80/20)
 
