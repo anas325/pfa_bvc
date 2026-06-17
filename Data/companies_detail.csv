@@ -1,46 +1,73 @@
 company,sector,parent
 Attijariwafa Bank,Banking,Al Mada
+Managem,Mining,Al Mada
+Itissalat Al-Maghrib (Maroc Telecom),Telecom,e& (Etisalat) + State
+Marsa Maroc,Port Operations,State
 Banque Centrale Populaire,Banking,State / Cooperative Group
 Bank of Africa,Banking,BMCE Group
-BMCI,Banking,BNP Paribas
-CIH Bank,Banking,CDG
-Credit du Maroc,Banking,Holding (Saham / Holmarcom partial)
-CFG Bank,Banking,Independent
-Maroc Telecom,Telecom,e& (Etisalat) + State
-HPS,Technology,Independent
-Managem,Mining,Al Mada
-SMI (Societe Metallurgique d'Imiter),Mining,Managem
-CMT (Compagnie Miniere de Touissit),Mining,Independent
 TAQA Morocco,Energy,TAQA (UAE)
-Afriquia Gaz,Oil & Gas,Akwa Group
-TotalEnergies Marketing Maroc,Oil & Gas,TotalEnergies
+SGTM (Société Générale des Travaux du Maroc),Construction,Kabbaj Family
 LafargeHolcim Maroc,Construction Materials,Holcim Group
 Ciments du Maroc,Construction Materials,Heidelberg Materials
-Sonasid,Steel,ArcelorMittal (partial)
-Aluminium du Maroc,Construction Materials,Independent
-TGCC (Travaux Generaux),Construction,Independent
-Addoha (Douja Promotion Groupe),Real Estate,Independent
-Alliances Developpement Immobilier,Real Estate,Independent
-Residences Dar Saada,Real Estate,Palmeraie Group
-Aradei Capital,Real Estate,CFG Group
-Marsa Maroc,Port Operations,State
-Auto Hall,Distribution,Auto Hall Group
-Auto Nejma,Distribution,Mercedes-Benz Group (distribution rights)
-Label Vie,Retail,Best Financiere Group
+TGCC (Travaux Généraux de Construction de Casablanca),Construction,Independent
 Cosumar,Agro-industry,Wilmar + Cosumar Group
-Lesieur Cristal,Agro-industry,Avril Group
-Cartier Saada,Agro-industry,Independent
-Akdital,Healthcare,Akdital Group
-AtlantaSanad,Insurance,Holmarcom Group
 Wafa Assurance,Insurance,Attijariwafa Bank
-Sanlam Maroc,Insurance,Sanlam Group
-AGMA,Insurance,Independent
-AFMA,Insurance,Independent
+Akdital,Healthcare,Akdital Group
+TotalEnergies Marketing Maroc,Oil & Gas,TotalEnergies
+Afriquia Gaz,Oil & Gas,Akwa Group
+CIH Bank,Banking,CDG
 Sothema,Pharmaceuticals,Independent
-Delta Holding,Industrial,Delta Holding Group
-Jet Contractors,Construction,Independent
-Risma,Tourism,Accor (partial)
+Addoha Group,Real Estate,Independent
+Crédit du Maroc,Banking,Holmarcom Group
+Label Vie,Retail,Best Financière Group
+SMI (Société Métallurgique d'Imiter),Mining,Managem
+Lesieur Cristal,Agro-industry,Avril Group
+Alliances Développement Immobilier,Real Estate,Independent
+Sanlam Maroc,Insurance,Sanlam Group
+CFG Bank,Banking,Independent
+AtlantaSanad,Insurance,Holmarcom Group
+BMCI (Banque Marocaine pour le Commerce et l'Industrie),Banking,BNP Paribas
+Sonasid,Steel,Al Mada / ArcelorMittal (NSI JV)
 Cash Plus,Financial Services,Independent
-EQDOM,Consumer Finance,Societe Generale
-Oulmès (Eaux Minerales),Beverage,Holmarcom Group
-SBM (Brasseries du Maroc),Beverage,Castel Group
+Jet Contractors,Construction,Independent
+CMGP Group,Distribution / Agri-equipment,Independent
+Compagnie Minière de Touissit,Mining,Atlas Mining (partial)
+Société des Boissons du Maroc,Beverage,Castel Group
+Aradei Capital,Real Estate,CFG Group
+Delta Holding,Industrial,Delta Holding Group
+Risma,Tourism,Accor (partial)
+Auto Nejma,Distribution,Mercedes-Benz (distribution rights)
+Auto Hall,Distribution,Auto Hall Group
+Vicenne,Healthcare / Eyecare,Independent
+Hightech Payment Systems (HPS),Technology,Independent
+Résidences Dar Saada,Real Estate,Palmeraie Group
+Eaux Minérales d'Oulmès,Beverage,Holmarcom Group
+Eqdom,Consumer Finance,Société Générale
+AFMA,Insurance,Independent
+Afric Industries,Industrial / Manufacturing,Independent
+AGMA,Insurance,Independent
+Aluminium du Maroc,Construction Materials,Independent
+Balima,Insurance,CDG
+Cartier Saada,Agro-industry,Independent
+Invictus Investments,Financial Services,Independent
+M2M Group,Technology / Fintech,Independent
+Microdata,Technology,Independent
+Rebab Company,Real Estate,Independent
+SNEP,Chemicals / Plastics,OCP Group (partial)
+SNP (Société Nationale de Pétrochimie),Chemicals,Independent
+Stroc Industrie,Industrial / Engineering,Independent
+Stokvis Nord Afrique,Distribution / Automotive,Independent
+Timar,Logistics,Independent
+Unimer,Agro-industry / Seafood,Independent
+Disway,Technology Distribution,Independent
+Colorado,Paints / Coatings,Berrada Family
+Ib Maroc,Technology / IT Services,Independent
+Immorente Invest,Real Estate (REIT),Independent
+Maghreb Oxygène,Industrial Gases,Air Liquide (partial)
+Med Paper,Paper / Packaging,Independent
+Nexans Maroc,Cables / Wiring,Nexans Group
+S2M,Technology / Payment,Independent
+Salafin,Consumer Finance,Bank of Africa Group
+Sofac,Consumer Finance,Crédit Agricole (partial)
+Snecma Maroc,Aerospace / Maintenance,Safran Group
+Société de Réalisations Mécaniques,Industrial / Engineering,Independent
