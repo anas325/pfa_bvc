@@ -249,10 +249,10 @@ def full_refresh(engine: Engine, table_name: str, df: pd.DataFrame) -> None:
 
 
 def truncate_all(engine: Engine) -> None:
-    """Truncates all gold tables in FK-safe order (children first)."""
+    """Truncates all gold tables in one statement (required for FK-constrained tables)."""
+    tables = ", ".join(_TRUNCATE_ORDER)
     with engine.begin() as conn:
-        for tbl in _TRUNCATE_ORDER:
-            conn.execute(text(f"TRUNCATE TABLE {tbl}"))
+        conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
 
 
 def run_all(
